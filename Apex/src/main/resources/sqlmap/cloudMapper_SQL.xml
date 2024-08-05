@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.ICloudMapper">
+
+	<insert id="insertFile" parameterType="cloudVO">
+		insert into CLOUD (
+			CLOUD_NO, FOLDER_NO, CLOUD_NAME, CLOUD_ORIGIN_NAME, CLOUD_DOWNHIT
+			, CLOUD_SIZE, CLOUD_FANCYSIZE, CLOUD_DATE, CLOUD_SAVEPATH, CLOUD_WRITER
+			, CLOUD_MIME, CLOUD_IMGPATH, CLOUD_DOWNLOADPATH
+		)
+		values (
+			seq_cloud.nextval, #{folderNo}, #{cloudName}, #{cloudOriginName}, 0
+			, #{cloudSize}, #{cloudFancysize}, SYSDATE, #{cloudSavepath}, #{cloudWriter}
+			, #{cloudMime}, #{cloudImgpath}, #{cloudDownloadpath}
+		)
+	</insert>
+	
+	<select id="selectAllList" resultType="cloudVO">
+		select CLOUD_NO, FOLDER_NO, CLOUD_NAME, CLOUD_ORIGIN_NAME, CLOUD_DOWNHIT
+			, CLOUD_SIZE, CLOUD_FANCYSIZE, CLOUD_DATE, CLOUD_SAVEPATH, CLOUD_WRITER
+			, CLOUD_MIME, CLOUD_IMGPATH, CLOUD_DOWNLOADPATH
+		from cloud
+		order by CLOUD_NO
+	</select>
+	
+	<select id="selectAllFolder" resultType="folderVO">
+		select 
+			FOLDER_NO, PRO_NO, FOLDER_NAME, PARENT_FOLDER_NO
+		from folder
+		WHERE PRO_NO = #{proNo}
+		order by FOLDER_NO
+	</select>
+	
+	<update id="modifyFile" parameterType="cloudVO">
+		UPDATE CLOUD SET CLOUD_ORIGIN_NAME = #{cloudOriginName}
+		WHERE CLOUD_NO = #{cloudNo}
+	</update>
+	
+	<delete id="deleteFile" parameterType="int">
+		DELETE FROM CLOUD WHERE CLOUD_NO = #{cloudNO}
+	</delete>
+	
+	<select id="getFileFromFolderNo" parameterType="int" resultType="cloudVO">
+		SELECT 
+			* 
+		FROM CLOUD 
+		WHERE FOLDER_NO = #{folderNo}
+		ORDER BY CLOUD_NO
+	</select>
+	
+	<select id="findParentFolder" parameterType="int" resultType="int">
+		SELECT DISTINCT PARENT_FOLDER_NO
+  			FROM FOLDER
+  		WHERE FOLDER_NO = #{folderNo}
+	</select>
+	
+	<insert id="createNewFolder" parameterType="folderVO">
+		insert into FOLDER (FOLDER_NO, PRO_NO, FOLDER_NAME, PARENT_FOLDER_NO)
+		values(seq_folder.nextval , #{proNo}, #{folderName}, #{parentFolderNo})
+	</insert>
+	
+	<select id="childFolderList" parameterType="int" resultType="folderVO">
+		select FOLDER_NO
+			, PRO_NO
+			, FOLDER_NAME
+			, PARENT_FOLDER_NO
+		FROM FOLDER
+		WHERE PARENT_FOLDER_NO = #{folderNo}
+		ORDER BY FOLDER_NO
+	</select>
+	
+	<update id="modifyFolder" parameterType="folderVO">
+		UPDATE FOLDER SET FOLDER_NAME = #{folderName}
+		WHERE FOLDER_NO = #{folderNo}
+	</update>
+	
+	<delete id="deleteFolder" parameterType="int">
+		DELETE FROM FOLDER WHERE FOLDER_NO = #{folderNo}
+	</delete>
+	
+	<delete id="deleteAllFileFromFolder" parameterType="int">
+		DELETE FROM CLOUD WHERE FOLDER_NO = #{folderNo}
+	</delete>
+	
+	<select id="hasParent" parameterType="int" resultType="int">
+		select count(*) from folder
+		where PARENT_FOLDER_NO = #{folderNo}
+	</select>
+	
+	<select id="selectSearchFile" parameterType="String" resultType="cloudVO">
+		SELECT 
+			*
+		FROM CLOUD
+		WHERE CLOUD_ORIGIN_NAME like '%'||#{searchString}||'%'
+		ORDER BY CLOUD_NO
+	</select>
+
+</mapper>

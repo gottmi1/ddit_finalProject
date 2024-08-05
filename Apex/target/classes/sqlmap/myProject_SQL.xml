@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IMyProjectMapper">
+
+	<select id="selectMyProject" parameterType="int" resultType="projectsVO">
+		SELECT * FROM PROJECTS
+		WHERE PRO_NO IN (
+			SELECT PRO_NO FROM MEMBERS 
+			<if test="empNo != 1">
+				WHERE EMP_NO = #{empNo}
+			</if>
+			<if test="empNo == 1">
+				WHERE 1 = 1
+			</if>
+			
+		)
+		<if test="status != 0 and status != 5">
+			and PRO_STATUS = #{status}
+		</if>
+		<if test="status == 5">
+			and PRO_STATUS = 2
+		</if>
+		order by pro_no
+	</select>
+
+	<select id="selectCompleteWorkCnt" parameterType="int" resultType="int">
+		SELECT COUNT(*) FROM WORKS
+			WHERE PRO_NO = #{proNo}
+			AND WORK_PROG = 100
+	</select>
+	
+	<select id="selectWorkCnt" parameterType="int" resultType="int">
+		SELECT COUNT(*) FROM WORKS
+			WHERE PRO_NO = #{proNo}
+	</select>
+	
+	<update id="modifyProject" parameterType="projectsVO">
+		UPDATE PROJECTS
+			SET PRO_NAME = #{proName}
+			, PRO_CONTENT = #{proContent}
+			, PRO_ENDDATE = #{proEnddate}
+		WHERE PRO_NO = #{proNo}
+	</update>
+	
+	<update id="completeProject">
+	UPDATE PROJECTS
+			SET PRO_STATUS = 4
+			, PRO_ENDDATE = SYSDATE
+		WHERE PRO_NO = #{proNo}
+	</update>
+</mapper>

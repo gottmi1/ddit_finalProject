@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.ICommonCalendarMapper">
+	<select id="getAllEvents" parameterType="int" resultType="calendarVO">
+		SELECT ID,
+				EMP_NO,
+				TITLE,
+				CONTENT,
+				STARTDATE,
+				ENDDATE,
+				TEXT_COLOR,
+				ALLDAY
+		FROM CALENDAR
+		WHERE COMMON = 2
+	</select>
+	
+	<insert id="insertEvent" parameterType="calendarVO">
+		INSERT INTO CALENDAR(
+			ID, EMP_NO, TITLE, CONTENT, STARTDATE, ENDDATE, TEXT_COLOR, ALLDAY, COMMON
+		)
+		VALUES (
+			SEQ_CALENDAR.NEXTVAL, #{empNo}, #{title}, #{content}, #{startdate}, #{enddate}, #{textColor}, #{allday} ,2
+		)
+	</insert>
+	
+	<update id="updateEvent" parameterType="calendarVO">
+		UPDATE CALENDAR
+		SET STARTDATE = #{startdate, jdbcType=DATE},
+			ENDDATE = #{enddate, jdbcType=DATE}
+		WHERE ID = #{id}
+	</update>
+	
+	<select id="eventDetail" parameterType="int" resultType="calendarVO">
+		select 
+				ID,
+				EMP_NO,
+				TITLE,
+				CONTENT,
+				STARTDATE,
+				ENDDATE,
+				TEXT_COLOR,
+				ALLDAY
+		from calendar
+		where id = #{id}
+	</select>
+	
+	<update id="updateEventDetail" parameterType="calendarVO">
+		update calendar
+		set
+			TITLE = #{title},
+			CONTENT = #{content},
+			STARTDATE = #{startdate},
+			ENDDATE = #{enddate},
+			TEXT_COLOR = #{textColor},
+			ALLDAY = #{allday}
+		where id = #{id}
+	</update>
+	
+	<delete id="deleteEvent" parameterType="int">
+		DELETE FROM CALENDAR
+		WHERE ID = #{id}
+	</delete>
+	
+	
+</mapper>

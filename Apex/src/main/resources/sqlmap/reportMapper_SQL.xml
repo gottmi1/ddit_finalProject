@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="kr.or.ddit.mapper.IReportMapper">
+
+	<sql id="reportSearch">
+		<if test="searchType != null and searchType =='title'">
+		   and (r.report_title like '%' || #{searchWord} ||'%')
+		</if>
+		<if test="searchType != null and searchType =='writer'">
+		   and (e.emp_name like '%' || #{searchWord} ||'%')
+		</if>
+	</sql>
+	
+	<!--  -->
+	<select id="selectReportList" parameterType="pagingVO" resultType="reportVO">
+		select b.*
+	 	  from (select a.*
+			  		 , row_number() over(order by a.report_no desc) rnum
+			  	  from (select r.report_no
+			  	             , r.report_title
+			  	             , e.emp_no
+			  	             , e.emp_name as "reportWriter"
+			  	             , r.report_date
+			  	             , r.report_hit
+			  	          from report r, employee e
+			  	         where r.emp_no = e.emp_no
+			  	           and r.report_delyn = 'N'
+			  	           and r.pro_no = #{searchVO.proNo}
+			  	           and 1=1
+			  	      <include refid="reportSearch"/>
+			  	         order by r.report_no desc) a
+		    )b    
+		<![CDATA[
+		 where b.rnum >= #{startRow} and b.rnum <= #{endRow}
+		]]>
+	</select>
+	
+	<!-- 페이징 처리를 위한 게시글 갯수 -->
+	<select id="selectReportCount" parameterType="pagingVO"  resultType="int">
+		select count(r.report_no)
+  		  from report r, employee e
+ 		 where r.report_delyn = 'N'
+ 		   and r.emp_no = e.emp_no
+ 		   and r.pro_no = #{searchVO.proNo}
+ 		   and 1=1
+ 		 <include refid="reportSearch"/>
+	</select>
+	
+	<!-- 주인공 reportVO 1 -->
+	<resultMap type="reportVO" id="reportMap">
+		<result property="reportNo" column="REPORT_NO"/>
+		<result property="proNo" column="PRO_NO"/>
+		<result property="empNo" column="EMP_NO"/>
+		<result property="reportTitle" column="REPORT_TITLE"/>
+		<result property="reportContent" column="REPORT_CONTENT"/>
+		<result property="reportDate" column="REPORT_DATE"/>
+		<result property="reportModdate" column="REPORT_MODDATE"/>
+		<result property="reportDelyn" column="REPORT_DELYN"/>
+		<result property="reportHit" column="REPORT_HIT"/>
+		<association property="reportFile" resultMap="filesMap"></association>
+	</resultMap>
+	
+	<!-- 1) REPORT : FILES = 1 : 1 -->
+	<resultMap type="filesVO" id="filesMap">
+		<result property="fileNo" column="FILE_NO"/>
+		<result property="fileRegdate" column="FILE_REGDATE"/>
+		<result property="fileWhereNo" column="FILE_WHERE_NO"/>
+		<result property="fileWherePk" column="FILE_WHERE_PK"/>
+		<collection property="fileList" resultMap="fileDetailMap"></collection>
+	</resultMap>
+	
+	<!-- 2) FILES : FILE_DETAIL = 1 : N -->
+	<resultMap type="fileDetailVO" id="fileDetailMap">
+		<result property="fileDetailNo" column="FILE_DETAIL_NO"/>
+		<result property="fileNo" column="FILE_NO"/>
+		<result property="fileSaveName" column="FILE_SAVE_NAME"/>
+		<result property="fileOriginName" column="FILE_ORIGIN_NAME"/>
+		<result property="fileSize" column="FILE_SIZE"/>
+		<result property="fileUrl" column="FILE_URL"/>
+		<result property="fileMime" column="FILE_MIME"/>
+		<result property="fileFancysize" column="FILE_FANCYSIZE"/>
+	</resultMap>
+	
+	<!--  -->
+	<select id="reportDetail" parameterType="int" resultMap="reportMap">
+		select r.report_no, r.pro_no, r.emp_no, r.report_title, r.report_content, r.report_date, r.report_delyn, r.report_moddate, r.report_hit
+			 , f.file_no, f.file_regdate, f.file_where_no, f.file_where_pk
+		     , fd.file_detail_no, fd.file_save_name, fd.file_origin_name, fd.file_size, fd.file_url, fd.file_mime, fd.file_fancysize
+		  from report r 
+		  	   left outer join files f on(r.report_no = f.file_where_pk and f.file_where_no = 5)
+		       left outer join file_detail fd on(f.file_no = fd.file_no)
+		 where r.report_no = #{reportNo}
+	</select>
+	
+	<!-- 조회 수 증가 -->
+	<update id="incrementHit" parameterType="int">
+		update report
+		   set report_hit = report_hit + 1
+		 where report_no = #{reportNo}
+	</update>
+	
+	<!-- 자유게시판 등록 및 파일 처리 시작 -->
+	<!-- 자유게시판 데이터 등록 -->
+	<insert id="insertReport" parameterType="reportVO" useGeneratedKeys="true">
+		<selectKey keyProperty="reportNo" resultType="int" order="BEFORE">
+			select nvl(max(report_no),0)+1 from report
+		</selectKey>
+		insert into report(
+			report_no, pro_no, emp_no, report_title, report_content, report_date
+		)values(
+			#{reportNo}, #{proNo}, #{empNo}, #{reportTitle}, #{reportContent}, sysdate
+		)
+	</insert>
+	
+	<!-- 파일 테이블 등록(파일 상세를 담을 부모 테이블) -->
+	<insert id="insertFiles" parameterType="filesVO" useGeneratedKeys="true">
+		<selectKey keyProperty="fileNo" resultType="int" order="BEFORE">
+			select seq_file.nextval from dual
+		</selectKey>
+		insert into files(
+			file_no, file_regdate, file_where_no, file_where_pk
+		)values(
+			#{fileNo}, sysdate, #{fileWhereNo}, #{fileWherePk}
+		)
+	</insert>
+	
+	<!-- 파일 상세 테이블 등록 -->
+	<insert id="insertFileDetail" parameterType="fileDetailVO">
+		insert into file_detail(
+			file_detail_no, file_no, file_save_name, file_origin_name, file_size,
+			file_url, file_mime, file_fancysize
+		)values(
+			seq_file_detail.nextval, #{fileNo}, #{fileSaveName}, #{fileOriginName}, #{fileSize}, 
+			#{fileUrl}, #{fileMime}, #{fileFancysize}
+		)
+	</insert>
+	<!-- 자유게시판 등록 및 파일 처리 끝-->
+	
+	<!-- 게시글 수정 -->
+	<update id="updateReport" parameterType="reportVO">
+		update report
+		   set report_title = #{reportTitle}
+		     , report_content = #{reportContent}
+		     , report_moddate = sysdate
+		 where report_no = #{reportNo}
+	</update>	
+	
+	<!-- 게시글 파일 가져오기 -->
+	<select id="selectReportFile" parameterType="int" resultType="fileDetailVO">
+		select file_url
+		  from file_detail
+		 where file_detail_no = #{fileDetailNo}
+	</select>
+	
+	<!-- 게시글 수정 시 기존 파일 삭제 -->
+	<delete id="deleteReportFile" parameterType="int">
+		delete from file_detail
+		 where file_detail_no = #{fileDetailNo}
+	</delete>
+	
+	<!-- Files삭제 -->
+	<delete id="deleteFiles" parameterType="int">
+		delete from files
+		where file_no = #{fileNo}
+	</delete>
+	
+	<!-- 게시글 삭제 -->
+	<update id="deleteReport" parameterType="int">
+		update report
+		   set report_delyn = 'Y'
+		 where report_no = #{reportNo}
+	</update>
+	
+	<!-- 사원 이름 가져오기 -->
+	<select id="selectEmpList" parameterType="int" resultType="employeeVO">
+		select * 
+		  from employee 
+	</select>
+	
+	<!-- 게시글 내 댓글/답글 조회  -->
+	<select id="selectComment" parameterType="int" resultType="reportCommentVO">
+		select report_co_no
+			 , report_no
+			 , emp_no
+			 , report_co_content
+			 , report_co_moddate
+			 , report_co_parent_no
+		  from report_comment
+		 where report_no = #{reportNo}
+		 order by report_co_no
+	</select>
+	
+	<!-- 게시글 내 댓글/답글 등록 -->
+	<insert id="addComment" parameterType="reportCommentVO">
+		<selectKey resultType="int" order="BEFORE" keyProperty="reportCoNo">
+			select seq_report_comm.nextval from dual
+		</selectKey>
+	
+		insert into report_comment
+		(
+			report_co_no, report_no, emp_no, report_co_content, report_co_date
+			<if test="reportCoParentNo != 0">
+				, report_co_parent_no
+			</if>
+		)
+		values
+		(
+			#{reportCoNo}, #{reportNo}, #{empNo}, #{reportCoContent}, SYSDATE
+			<if test="reportCoParentNo != 0">
+				, #{reportCoParentNo}
+			</if>
+		)	
+	</insert>
+	
+	<!-- 게시글 내 댓글/답글 수정 -->
+	<update id="modifyComment" parameterType="reportCommentVO">
+		update report_comment
+		   set report_co_content = #{reportCoContent}
+		 where report_co_no = #{reportCoNo}
+	</update>
+	
+	<!-- 게시글 내 댓글/답글 삭제 -->
+	<update id="deleteComment">
+		update report_comment
+		   set report_co_content = 'Deleted comments'
+		 where report_co_no = #{reportCoNo}
+	</update>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

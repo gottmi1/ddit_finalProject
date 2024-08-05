@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IHistoryMapper">
+
+	<!-- 동적 쿼리 필요에따라서 수행 할 수도 안할 수도 있다 -->
+	 <sql id="historySearch">
+<!-- 	   <if test="searchType != null and searchType =='title'"> -->
+<!-- 	      and (bo_title like '%'||#{searchWord}||'%') -->
+<!-- 	   </if> -->
+		<if test="searchWord != null and searchWord != ''">
+			and (w.work_title LIKE '%' || #{searchWord} || '%' OR w.work_content LIKE '%' || #{searchWord} || '%')
+		</if>
+	</sql>
+	
+	<sql id="worksInsertHistory">
+		<if test="tbNm != null and tbNm != ''">
+			tb_nm = #{tbNm},
+		</if>
+	</sql>
+	
+    <!-- 히스토리 목록 조회 
+    {startRow=1, endDate=, itemsPerPage=20, endRow=20, searchWord=, page=1, projectId=1, startDate=2024-09-01}
+    -->
+	<select id="getHistoryList" parameterType="map" resultType="historyVO">
+		
+		<![CDATA[
+		select *
+			from (
+			    select
+			        row_number() over (order by history_date desc, history_no desc) as row_number,
+			        history_no,  
+			        history_date,
+			        his_tb_nm, 
+			        his_work_no, 
+			        his_work_status, 
+			        his_work_title, 
+			        his_work_content, 
+			        his_work_first,
+			        his_work_date, 
+			        his_work_startdate, 
+			        his_work_enddate, 
+			        his_work_prog, 
+			        his_work_parent_no,
+			        his_work_manager_list, 
+			        his_work_file_origin_name,
+			        his_pro_name, 
+			        his_pro_status, 
+			        his_pro_content, 
+			        his_pro_startdate, 
+			        his_pro_enddate, 
+			        his_pro_reject_reason, 
+			        his_pro_leader, 
+			        his_pro_manager_list, 
+			        his_pro_member_list,
+			        case 
+			            when his_modify_type is null then '등록'
+			            when his_modify_type = '1' then '수정'
+			        end as action_type
+			    from history
+			    where his_pro_no = #{projectId}
+			      and (his_tb_nm = 'WORKS' or his_tb_nm = 'PROJECTS')
+		]]>	
+			      <if test="searchWord != null and searchWord != ''">
+			        and (
+			            (his_tb_nm = 'WORKS' and (
+			                his_work_title LIKE '%' || #{searchWord} || '%'
+			                 or his_work_content LIKE '%' || #{searchWord} || '%'
+			                 or his_work_manager_list LIKE '%' || #{searchWord} || '%'
+			            ))
+			            or
+			            (his_tb_nm = 'PROJECTS' and (
+			                his_pro_name LIKE '%' || #{searchWord} || '%'
+			                 or his_pro_content LIKE '%' || #{searchWord} || '%'
+			                 or his_pro_leader LIKE '%' || #{searchWord} || '%'
+			                 or his_pro_member_list LIKE '%' || #{searchWord} || '%'
+			            ))
+			        )
+			      </if>
+			      <!-- 
+			      1. startDate + endDate
+			      2. startDate
+			      3. endDate
+			      4. 없음
+			       -->
+<!-- 			      <if test="startDate !=null and startDate !=''"> -->
+<!-- 					  <![CDATA[ -->
+<!-- 					     AND history_date >= TO_DATE(#{startDate}, 'YYYY-MM-DD HH24:MI:SS') -->
+<!-- 					  ]]> -->
+<!-- 					</if> -->
+<!-- 					<if test="endDate !=null and endDate !=''"> -->
+<!-- 					  <![CDATA[ -->
+<!-- 					    AND history_date <= TO_DATE(#{endDate}, 'YYYY-MM-DD HH24:MI:SS') -->
+<!-- 					  ]]> -->
+<!-- 					</if> -->
+<!-- 					<if test="(startDate == null or startDate == '') and (endDate == null or endDate == '')"> -->
+<!-- 					  <![CDATA[ -->
+<!-- 					  	AND 1=1 -->
+<!-- 					  ]]> -->
+<!-- 					</if> -->
+				<if test="startDate != null and startDate != '' and endDate != null and endDate != '' and startDate == endDate">
+				  <![CDATA[
+				    AND history_date >= TO_DATE(#{startDate}, 'YYYY-MM-DD HH24:MI:SS')
+				    AND history_date < TO_DATE(#{startDate}, 'YYYY-MM-DD HH24:MI:SS') + INTERVAL '1' DAY
+				  ]]>
+				</if>
+				<if test="startDate != null and startDate != '' and (endDate == null or endDate == '')">
+				  <![CDATA[
+				    AND history_date >= TO_DATE(#{startDate}, 'YYYY-MM-DD HH24:MI:SS')
+				  ]]>
+				</if>
+				<if test="endDate != null and endDate != '' and (startDate == null or startDate == '')">
+				  <![CDATA[
+				    AND history_date <= TO_DATE(#{endDate}, 'YYYY-MM-DD HH24:MI:SS')
+				  ]]>
+				</if>
+				<if test="startDate != null and startDate != '' and endDate != null and endDate != '' and startDate != endDate">
+				  <![CDATA[
+				    AND history_date >= TO_DATE(#{startDate}, 'YYYY-MM-DD HH24:MI:SS')
+				    AND history_date <= TO_DATE(#{endDate}, 'YYYY-MM-DD HH24:MI:SS')
+				  ]]>
+				</if>
+				<if test="(startDate == null or startDate == '') and (endDate == null or endDate == '')">
+				  <![CDATA[
+				    AND 1=1
+				  ]]>
+				</if>
+		<![CDATA[
+			) t
+			where row_number between #{startRow} and #{endRow}
+			order by row_number
+		]]>	
+	</select>
+
+    <!-- 히스토리 글 총 갯수 -->
+    <select id="getTotalRecords" parameterType="map" resultType="int">
+        SELECT COUNT(*) as total_count
+        FROM history
+        WHERE 
+            his_pro_no = #{projectId}
+        <if test="searchWord != null and searchWord != ''">
+            AND (
+            	his_work_title LIKE '%' || #{searchWord} || '%'
+                 OR his_work_content LIKE '%' || #{searchWord} || '%'
+                 OR his_work_manager_list LIKE '%' || #{searchWord} || '%'
+                 OR his_pro_name LIKE '%' || #{searchWord} || '%'
+                 OR his_pro_content LIKE '%' || #{searchWord} || '%'
+                 OR his_Pro_Leader LIKE '%' || #{searchWord} || '%'
+                 OR his_pro_manager_list LIKE '%' || #{searchWord} || '%'
+            )
+        </if>
+        <if test="startDate !=null and startDate !=''">
+		  <![CDATA[
+		     AND history_date >= TO_DATE(#{startDate}, 'YYYY-MM-DD HH24:MI:SS')
+		  ]]>
+		</if>
+		<if test="endDate !=null and endDate !=''">
+		  <![CDATA[
+		    AND history_date <= TO_DATE(#{endDate}, 'YYYY-MM-DD HH24:MI:SS')
+		  ]]>
+		</if>
+		<if test="(startDate == null or startDate == '') and (endDate == null or endDate == '')">
+		  <![CDATA[
+		  	AND 1=1
+		  ]]>
+		</if>
+    </select>
+    
+    <!-- 일감 등록,수정시 히스토리에 등록 -->
+    <insert id="worksInsertHistory" parameterType="historyVO">
+    	INSERT INTO HISTORY(
+    		HISTORY_NO,
+    		HISTORY_DATE,
+            HIS_TB_NM,
+            HIS_MODIFY_TYPE,
+    		HIS_PRO_NO,
+    		HIS_WORK_NO,
+			HIS_WORK_STATUS,
+			HIS_WORK_TITLE,
+			HIS_WORK_CONTENT,
+			HIS_WORK_FIRST,
+			HIS_WORK_DATE,
+			HIS_WORK_STARTDATE,
+			HIS_WORK_ENDDATE,
+			HIS_WORK_PROG,
+			HIS_WORK_PARENT_NO,
+<!-- 			HIS_WORK_CNT, -->
+			HIS_WORK_MANAGER_LIST
+			<if test="hisWorkFileOriginName != null and hisWorkFileOriginName != ''">
+            , HIS_WORK_FILE_ORIGIN_NAME
+        </if>
+    	) VALUES (
+    		(SELECT NVL(MAX(HISTORY_NO), 0) + 1 FROM HISTORY),
+    		SYSDATE,
+            #{hisTbNm},
+            #{hisModifyType},
+    		#{hisProNo},
+    		#{hisWorkNo},
+    		#{hisWorkStatus},
+    		#{hisWorkTitle},
+    		#{hisWorkContent},
+    		#{hisWorkFirst},
+    		SYSDATE,
+    		TO_DATE(#{hisWorkStartdate}, 'YYYY-MM-DD'),
+    		TO_DATE(#{hisWorkEnddate}, 'YYYY-MM-DD'),
+    		#{hisWorkProg},
+    		#{hisWorkParentNo},
+<!--     		#{hisWorkCnt}, -->
+    		#{hisWorkManagerList}
+    		<if test="hisWorkFileOriginName != null and hisWorkFileOriginName != ''">
+	            , #{hisWorkFileOriginName}
+	        </if>
+<!--     		(SELECT NVL(MAX(hisWorkCnt), 0) + 1 FROM HISTORY) -->
+    	)
+    </insert>
+    
+    <!-- 프로젝트 등록,수정시 히스토리에 등록 -->
+    <insert id="projectsInsertHistory" parameterType="historyVO">
+    	INSERT INTO HISTORY(
+    		HISTORY_NO,
+    		HISTORY_DATE,
+            HIS_TB_NM,
+            HIS_MODIFY_TYPE,
+    		HIS_PRO_NO,
+    		HIS_PRO_NAME,
+    		HIS_PRO_CONTENT,
+    		HIS_PRO_STARTDATE,
+    		HIS_PRO_ENDDATE,
+    		HIS_PRO_STATUS,
+    		HIS_PRO_REJECT_REASON,
+    		HIS_PRO_LEADER,
+<!--     		HIS_PRO_MANAGER_LIST, -->
+    		HIS_PRO_MEMBER_LIST
+    	) VALUES (
+    		(SELECT NVL(MAX(HISTORY_NO), 0) + 1 FROM HISTORY),
+    		SYSDATE,
+            #{hisTbNm},
+            #{hisModifyType},
+    		#{hisProNo},
+    		#{hisProName},
+    		#{hisProContent},
+<!--     		SYSDATE, -->
+			#{hisProStartdate},
+			#{hisProEnddate},
+<!--     		TO_CHAR(#{hisProStartdate},'YYYY-MM-DD'), -->
+<!--     		TO_CHAR(#{hisProEnddate},'YYYY-MM-DD'), -->
+<!--     		#{hisProEnddate}, -->
+    		#{hisProStatus},
+    		#{hisProRejectReason},
+    		#{hisProLeader},
+<!--     		#{hisProManagerList}, -->
+    		#{hisProMemberList}
+    	)
+    </insert>
+    
+    <!-- 프로젝트 멤버 목록 조회 -->
+    <select id="findMemberList" parameterType="int" resultType="int">
+    	select emp_no
+    	from members
+    	where pro_no = #{proNo}
+    
+    </select>
+    
+    
+    
+</mapper>

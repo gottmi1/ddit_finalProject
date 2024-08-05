@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IAdminDashMapper">
+	<!-- 총 프로젝트 개수 가져오기 -->
+	<select id="getTotalProjectCount" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*) FROM PROJECTS
+		Where 1 = #{default}
+	</select>
+
+	<select id="countProjectByStatus" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*) FROM PROJECTS 
+		WHERE 1 = #{default}
+		AND PRO_STATUS = #{projectStatus}
+	</select>
+	
+	<select id="getProjectCompletionOverTime" parameterType="hashMap" resultType="map">
+		<![CDATA[
+	    SELECT TO_CHAR(PRO_ENDDATE, 'YYYY-MM-DD') AS proDate,
+	           COUNT(*) AS completedCount
+	    FROM projects
+        WHERE pro_status = 4
+        GROUP BY TO_CHAR(PRO_ENDDATE, 'YYYY-MM-DD')
+        ORDER BY proDate
+	    ]]>
+	</select>
+	
+	<select id="getTotalWorkCount" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*) FROM WORKS
+		Where 1 = #{default}
+	</select>
+	
+	<select id="countWorkByStatus" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*) FROM WORKS 
+		WHERE 1 = #{default}
+		<if test="workStatus == 1">
+			AND WORK_STATUS = 3
+		</if>
+		<if test="workStatus == 2">
+			AND WORK_STATUS != 3
+		</if>
+	</select>
+	
+	<select id="countOverTimeWork" parameterType="hashMap" resultType="int">
+		<![CDATA[
+        SELECT COUNT(*) FROM WORKS 
+        WHERE 
+        CASE 
+            WHEN REGEXP_LIKE(WORK_ENDDATE, '^\d{4}\d{2}\d{2}$') THEN TO_DATE(WORK_ENDDATE, 'YYYYMMDD')
+        END < SYSDATE 
+        AND WORK_STATUS != 3
+        ]]>
+	</select>
+	
+	<select id="notCompleteWorkDetail" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*) FROM WORKS 
+		WHERE 1 = #{default}
+			AND WORK_STATUS = #{workStatus}
+	</select>
+	
+	<select id="getWorkByAssignee" parameterType="hashMap" resultType="managerVO">
+		<![CDATA[
+        SELECT employee.emp_name, COUNT(*) AS managerCount
+        FROM works
+        JOIN manager ON works.work_no = manager.work_no
+        JOIN employee ON manager.emp_no = employee.emp_no
+        WHERE works.work_status IN (1, 2, 4)
+        GROUP BY employee.emp_name
+        ]]>
+	</select>
+	
+	<select id="getWorkCompletionOverTime" resultType="map">
+	<![CDATA[
+	    SELECT TO_CHAR(TO_DATE(work_enddate, 'YYYYMMDD'), 'YYYY-MM-DD') AS workDate,
+	           COUNT(*) AS completedCount
+	    FROM works
+	    WHERE work_status = 3
+	    GROUP BY TO_CHAR(TO_DATE(work_enddate, 'YYYYMMDD'), 'YYYY-MM-DD')
+	    ORDER BY workDate
+	    ]]></select>
+
+</mapper>

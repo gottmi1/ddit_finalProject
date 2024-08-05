@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IUserDashMapper">
+	<select id="selectWorkCount" parameterType="int" resultType="int">
+		select count(work_no)
+		from manager
+		where emp_no = #{empNo}
+	</select>
+	
+	<select id="selectDoneWorkCount" parameterType="int" resultType="int">
+		SELECT COUNT(m.work_no)
+		FROM manager m
+		JOIN works w ON m.work_no = w.work_no
+		WHERE m.emp_no = #{empNo}
+		AND w.work_status = 3
+	</select>
+	
+	<select id="selectNoDoneWorkCount" parameterType="int" resultType="int">
+		SELECT COUNT(m.work_no)
+		FROM manager m
+		JOIN works w ON m.work_no = w.work_no
+		WHERE m.emp_no = #{empNo}
+		AND w.work_status IN (1, 2, 4)
+	</select>
+	
+	<select id="selectLateWorkCount" parameterType="int" resultType="int">
+		<![CDATA[
+		SELECT COUNT(m.work_no)
+		FROM manager m
+		JOIN works w ON m.work_no = w.work_no
+		WHERE m.emp_no = #{empNo}
+		AND w.work_enddate < SYSDATE
+		]]>
+	</select>
+	
+	<select id="selectBoardListTen" resultType="boardVO">
+		<![CDATA[
+		SELECT *
+		FROM (
+		    SELECT *
+		    FROM board
+		    ORDER BY bo_no desc
+		)
+		WHERE ROWNUM <= 10
+		]]>
+		
+	</select>
+	
+	<select id="getEmpName" parameterType="int" resultType="string">
+		select emp_name
+		from employee
+		where emp_no = #{empNo}
+	</select>
+	
+	<select id="selectMemberList" parameterType="int" resultType="int">
+		select pro_no
+	    from members
+	    where emp_no = #{empNo}
+	</select>
+	
+	<select id="selectProject" parameterType="int" resultType="projectsVO">
+		select *
+		from projects
+		where pro_no = #{proNo}
+	</select>
+	
+	
+
+</mapper>

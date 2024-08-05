@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IChatMapper">
+	<select id="checkAndCreateRoom" parameterType="map" resultType="chatRoomVO">
+		SELECT chatroom_no
+		FROM chat_entry
+		WHERE emp_no = #{myEmpNo}
+		
+		INTERSECT
+		
+		SELECT chatroom_no
+		FROM chat_entry
+		WHERE emp_no = #{targetEmpNo}
+	</select>
+	
+	<insert id="createRoom">
+		insert into chatroom (chatroom_no)
+		values (SEQ_CHATROOM.nextval)
+	</insert>
+	
+	<insert id="createChatEntry" parameterType="map">
+		insert into chat_entry (chatroom_no, emp_no, chat_title)
+		values (SEQ_CHATROOM.currval, #{empNo}, #{chatTitle})
+	</insert>
+	
+	<select id="chatConversationList" parameterType="int" resultType="chatVO">
+		select c.chat_no, chatroom_no, chat_content, chat_date, chat_writer, e.emp_name as chatWriterName, e.emp_profileimg as chatEmpProfileImg, f.file_no
+		from chat c 
+		left outer join employee e on(c.chat_writer = e.emp_no)
+		left outer join files f on(c.chat_no = f.file_where_pk and f.file_where_no = 2)
+		where c.chatroom_no = #{chatRoomNo}
+		order by c.chat_no asc
+	</select>
+	
+	<insert id="insertChat" parameterType="chatVO" useGeneratedKeys="true" keyProperty="chatNo">
+		<selectKey keyProperty="chatNo" resultType="int" order="BEFORE">
+			select seq_chat.nextval FROM dual
+		</selectKey>
+		insert into chat (chat_no, chatroom_no, chat_content, chat_date, chat_writer)
+		values (
+			#{chatNo} , #{chatroomNo}, #{chatContent}, sysdate, #{chatWriter}
+		)
+	</insert>
+	
+	<select id="findEmpNameByEmpNo" parameterType="int" resultType="string">
+		select emp_name
+		from employee
+		where emp_no= #{empNo}
+	</select>
+	
+	<select id="chatRoomList" parameterType="map" resultType="chatEntryVO">
+   
+        
+        
+	    select 
+	        ce1.chatroom_no, 
+	        ce1.emp_no, 
+	        ce1.chat_startno, 
+	        ce1.chat_readno, 
+	        ce1.chat_title, 
+	        e1.emp_name as empName,
+	        e1.emp_profileimg as empProfileimg,
+	        e2.emp_name as otherEmpName,
+	        e2.emp_no as otherEmpNo,
+	        e2.emp_profileimg as otherEmpProfileimg,
+	        c.chat_content as lastChat,
+	        c.chat_date as chatDate
+	    from 
+	        chat_entry ce1
+	    left outer join 
+	        employee e1 on (ce1.emp_no = e1.emp_no)
+	    left outer join 
+	        chat_entry ce2 on (ce1.chatroom_no = ce2.chatroom_no and ce1.emp_no != ce2.emp_no)
+	    left outer join 
+	        employee e2 on (ce2.emp_no = e2.emp_no)
+	    left outer join 
+	        chat c on (ce1.chatroom_no = c.chatroom_no)
+	    where 
+	        ce1.emp_no = #{empNo}
+	        and c.chat_no = (
+	            select max(chat_no)
+	            from chat
+	            where chatroom_no = ce1.chatroom_no
+	        )
+        <if test="searchValue != null">
+        	and ce1.chat_title like '%' || #{searchValue} || '%'
+   		</if>
+	    order by 
+	    	c.chat_date desc
+	</select>
+	
+	
+	<select id="findOtherByChatroomNo" parameterType="map" resultType="string">
+		select e.emp_profileimg
+		from chat_entry ce1
+		left outer join chat_entry ce2 on ce1.chatroom_no = ce2.chatroom_no and ce1.emp_no != ce2.emp_no
+		LEFT OUTER JOIN employee e ON ce2.emp_no = e.emp_no
+		WHERE ce1.emp_no = #{empNo} AND ce1.chatroom_no = #{chatroomNo}
+			
+	</select>
+	
+	
+	<insert id="insertFile" parameterType="filesVO" useGeneratedKeys="true" keyProperty="fileNo">
+		<selectKey keyProperty="fileNo" resultType="int" order="BEFORE">
+			select seq_file.nextval from dual
+		</selectKey>
+		insert into files (file_no, file_regdate, file_where_no, file_where_pk)
+		values (
+			#{fileNo}, sysdate, #{fileWhereNo}, #{fileWherePk}
+		)
+	
+	</insert>
+	
+	<insert id="insertFileDetail" parameterType="fileDetailVO" useGeneratedKeys="true" keyProperty="fileDetailNo">
+		<selectKey keyProperty="fileDetailNo" resultType="int" order="BEFORE">
+			select seq_file_detail.nextval from dual
+		</selectKey>
+		insert into file_detail (
+				FILE_DETAIL_NO,
+				FILE_NO,
+				FILE_SAVE_NAME,
+				FILE_ORIGIN_NAME,
+				FILE_SIZE,
+				FILE_URL,
+				FILE_MIME,
+				FILE_FANCYSIZE )
+		values (
+			#{fileDetailNo}, #{fileNo}, #{fileSaveName}, #{fileOriginName},
+			#{fileSize}, #{fileUrl}, #{fileMime}, #{fileFancysize}
+		)				
+	</insert>
+	
+	<select id="findFileDetail" parameterType="int" resultType="fileDetailVO">
+		SELECT FILE_DETAIL_NO,
+	       FILE_NO,
+	       FILE_SAVE_NAME,
+	       FILE_ORIGIN_NAME,
+	       FILE_SIZE,
+	       FILE_URL,
+	       FILE_MIME,
+	       FILE_FANCYSIZE,
+	       CASE 
+	           WHEN INSTR(FILE_URL, '\resources') > 0 THEN REPLACE(SUBSTR(FILE_URL, INSTR(FILE_URL, '\resources')), 'upload/', 'upload/s_')
+	           ELSE REPLACE(FILE_URL, 'upload/', 'upload/s_')
+	       END AS imgUrl
+		FROM file_detail
+		WHERE file_no = #{fileNo}
+	</select>
+	
+	
+</mapper>

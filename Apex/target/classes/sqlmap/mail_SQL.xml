@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IMailMapper">
+	
+	<select id="receivelist" parameterType="hashMap" resultType="receiveVO">
+		select t.*
+		  from (
+		  	select row_number() over(order by RECEIVE_NO desc) rnum
+			        ,RECEIVE_NO
+					,MAIL_NO
+					,RECEIVE_EMP
+					,MAIL_SENDER
+					,RECEIVE_CATEGORY
+					,RECEIVE_READ
+			      from receive
+			      where RECEIVE_EMP = #{empNo}
+			      <if test="mailMenu == 1">
+						and RECEIVE_CATEGORY != 3
+					</if>
+					<if test="mailMenu == 3 ">
+						and RECEIVE_CATEGORY = 2
+						and RECEIVE_CATEGORY != 3
+					</if>
+					<if test="mailMenu == 5 ">
+						and RECEIVE_CATEGORY = 3
+					</if>
+			      and RECEIVE_DEL_YN = 'N'
+		) t
+		where t.rnum between (#{pagingVO.currentPage} * 10) - (10 - 1) and (#{pagingVO.currentPage} * 10)
+	</select>
+	
+	
+	<select id="selectAsyncReceivePaging" parameterType="pagingVO" resultType="int">
+		SELECT COUNT(*)
+		FROM RECEIVE
+		where receive_emp = #{empNo}
+		<if test="mailMenu == 1">
+			and RECEIVE_CATEGORY != 3
+		</if>
+		<if test="mailMenu == 3 ">
+			and RECEIVE_CATEGORY = 2
+			and RECEIVE_CATEGORY != 3
+		</if>
+		<if test="mailMenu == 5 ">
+			and RECEIVE_CATEGORY = 3
+		</if>
+		and RECEIVE_DEL_YN = 'N'
+		order by receive_no desc
+		
+	</select>
+	
+	<select id="selectAsyncSendPaging" parameterType="pagingVO" resultType="int">
+		SELECT COUNT(*)
+		FROM MAIL
+		WHERE MAIL_SENDER = #{empNo}
+		<if test="mailMenu == 2">
+			and MAIL_SEND_CATEGORY = 1
+		</if>
+		<if test="mailMenu == 4 ">
+			and MAIL_SEND_CATEGORY = 2
+		</if>
+		and MAIL_DEL_YN = 'N'
+		ORDER BY MAIL_NO DESC
+		
+	</select>
+	
+	
+	<select id="selectReceiveCount" parameterType="pagingVO" resultType="int">
+		select count(*)
+  		  from RECEIVE 
+		WHERE RECEIVE_CATEGORY != 3
+		AND RECEIVE_EMP = #{empNo}
+	</select>
+	
+	<select id="filterReceiveMail" parameterType="pagingVO" resultType="receiveVO">
+	select t.*
+		  from (select row_number() over(order by MAIL_NO desc) rnum
+		  ,RECEIVE_NO
+			,MAIL_NO
+			,RECEIVE_EMP
+			,MAIL_SENDER
+			,RECEIVE_CATEGORY
+			,RECEIVE_READ
+			,RECEIVE_DEL_YN
+		from receive
+		where receive_emp = #{empNo}
+		and RECEIVE_DEL_YN = 'N'
+		<if test="receiveCategory == 1 ">
+			and RECEIVE_CATEGORY != 3
+		</if>
+		<if test="receiveCategory == 2 ">
+			and RECEIVE_CATEGORY = #{receiveCategory}
+			and RECEIVE_CATEGORY != 3
+		</if>
+		<if test="receiveCategory == 3 ">
+			and RECEIVE_CATEGORY = #{receiveCategory}
+		</if>
+		order by receive_no desc
+		) t
+		where t.rnum between (#{currentPage} * 10) - (10 - 1) and (#{currentPage} * 10)
+	</select>
+	
+	<select id="importantReceiveMail" parameterType="receiveVO" resultType="receiveVO">
+		select 
+			*
+		from receive
+		where receive_emp = #{receiveEmp}
+			and RECEIVE_CATEGORY = 2
+		order by receive_no desc
+	</select>
+	
+	
+	<select id="getMailFromMailNo" parameterType="int" resultType="mailVO">
+		select * from mail 
+		where mail_no = #{mailNo}
+	</select>
+	
+	
+	<select id="getReceiveFormMailNo" parameterType="int" resultType="receiveVO">
+		select * from receive where mail_no = #{mailNo}
+	</select>
+	
+	<insert id="sendMail" parameterType="mailVO" useGeneratedKeys="true">
+	<selectKey keyProperty="mailNo" resultType="int" order="BEFORE">
+      SELECT SEQ_MAIL.NEXTVAL FROM DUAL
+    </selectKey>
+		INSERT INTO MAIL(
+			MAIL_NO,
+			MAIL_SENDER,
+			MAIL_RECEIVER,
+			MAIL_TITLE,
+			MAIL_CONTENT,
+			MAIL_DATE,
+			MAIL_SEND_CATEGORY
+		)
+		VALUES(
+			#{mailNo},
+			#{mailSender},
+			#{mailReceiver},
+			#{mailTitle},
+			#{mailContent},
+			SYSDATE,
+			#{mailSendCategory}
+		)
+	</insert>
+	
+	<insert id="saveTempMail" parameterType="mailVO" useGeneratedKeys="true">
+		<selectKey keyProperty="mailNo" resultType="int" order="BEFORE">
+	      SELECT SEQ_MAIL.NEXTVAL FROM DUAL
+	    </selectKey>
+	    INSERT INTO MAIL(
+			MAIL_NO,
+			MAIL_SENDER,
+			MAIL_RECEIVER,
+			MAIL_TITLE,
+			MAIL_CONTENT,
+			MAIL_DATE,
+			MAIL_SEND_CATEGORY,
+			MAIL_RECEIVER_LIST
+		)
+		VALUES(
+			#{mailNo},
+			#{mailSender},
+			NULL,
+			#{mailTitle},
+			#{mailContent},
+			SYSDATE,
+			#{mailSendCategory},
+			#{mailReceiverList}
+		)
+	</insert>
+	
+	
+	
+	
+	<insert id="insertReceive" parameterType="receiveVO" useGeneratedKeys="true">
+		<selectKey keyProperty="receiveNo" resultType="int" order="BEFORE">
+	      SELECT SEQ_RECEIVE.NEXTVAL FROM DUAL
+	    </selectKey>
+		INSERT INTO RECEIVE (
+			RECEIVE_NO
+			, MAIL_NO
+			, RECEIVE_EMP
+			, MAIL_SENDER
+			, RECEIVE_CATEGORY
+			, RECEIVE_READ
+		)
+		VALUES 
+		(
+			#{receiveNo}
+			, #{mailNo}
+			, #{receiveEmp}
+			, #{mailSender}
+			, #{receiveCategory}
+			, #{receiveRead}
+		)
+	</insert>
+	
+	
+	<select id="selectFilesByMailNo" parameterType="hashMap" resultType="Integer">
+		SELECT 
+			COALESCE(MAX(file_No), 0)
+		FROM FILES 
+		WHERE FILE_WHERE_NO = #{whereNo}
+		AND FILE_WHERE_PK = #{wherePK}
+	</select>
+	
+	<select id="selectCurrentFileList" parameterType="int" resultType="fileDetailVO">
+		select 
+			*
+		from file_detail 
+		where file_no = #{fileNo}
+	</select>
+	
+	<insert id="insertNewFiles" parameterType="filesVO" useGeneratedKeys="true">
+		<selectKey resultType="int" keyProperty="fileNo" order="BEFORE">
+			select seq_file.nextval from dual
+		</selectKey>
+		insert into files (
+			FILE_NO, FILE_REGDATE, FILE_WHERE_NO, FILE_WHERE_PK
+		) values (
+			#{fileNo}, SYSDATE, #{fileWhereNo}, #{fileWherePk}
+		)
+	</insert>
+	
+	
+	<insert id="insertMailFile" parameterType="fileDetailVO">
+		insert into FILE_DETAIL (
+			FILE_DETAIL_NO
+			, FILE_NO
+			, FILE_SAVE_NAME
+			, FILE_ORIGIN_NAME
+			, FILE_SIZE
+			, FILE_URL
+			, FILE_MIME
+			, FILE_FANCYSIZE
+		) values (
+			seq_file_detail.nextval
+			, #{fileNo}
+			, #{fileSaveName}
+			, #{fileOriginName}
+			, #{fileSize}
+			, #{fileUrl}
+			, #{fileMime}
+			, #{fileFancysize}
+		)
+	</insert>
+	
+	<select id="getSaveMailList" parameterType="pagingVO" resultType="mailVO">
+	select t.*
+		  from (select row_number() over(order by MAIL_NO desc) rnum
+			, MAIL_NO
+			,MAIL_SENDER
+			,MAIL_RECEIVER
+			,MAIL_TITLE
+			,MAIL_CONTENT
+			,MAIL_DATE
+			,MAIL_SEND_CATEGORY
+			,MAIL_DEL_YN
+			,MAIL_RECEIVER_LIST	
+		 FROM MAIL WHERE MAIL_SENDER = #{empNo}
+			AND MAIL_SEND_CATEGORY = #{sendCategory}
+			AND MAIL_DEL_YN = 'N'
+		ORDER BY MAIL_NO desc
+		) t
+		where t.rnum between (#{currentPage} * 10) - (10 - 1) and (#{currentPage} * 10)
+	</select>
+	
+	<select id="getSendMailFromEmpNo" parameterType="int" resultType="mailVO">
+		SELECT * FROM MAIL WHERE MAIL_SENDER = #{empNo}
+		ORDER BY MAIL_NO desc
+	</select>
+	
+	<select id="getMySendMail" parameterType="pagingVO" resultType="receiveVO">
+		select t.*
+		  from (select row_number() over(order by M.MAIL_NO desc) rnum
+		    ,R.RECEIVE_NO
+		    ,R.MAIL_NO
+		    ,R.RECEIVE_EMP
+		    ,R.MAIL_SENDER
+		    ,R.RECEIVE_CATEGORY
+		    ,R.RECEIVE_READ
+		from RECEIVE R, MAIL M
+		WHERE R.MAIL_NO = M.MAIL_NO
+		AND M.MAIL_SENDER = #{empNo} 
+		AND M.MAIL_SEND_CATEGORY = #{sendCategory}
+		AND M.MAIL_DEL_YN = 'N'
+		ORDER BY R.RECEIVE_NO desc
+		) t
+		where t.rnum between (#{currentPage} * 10) - (10 - 1) and (#{currentPage} * 10)
+	</select>
+	
+	
+	
+	<update id="updateMailReceiveRead" parameterType="receiveVO">
+		UPDATE RECEIVE
+			SET RECEIVE_READ = 2
+		WHERE RECEIVE_NO = #{receiveNo}
+	</update>
+	
+	<update id="readAllMail" parameterType="receiveVO">
+		UPDATE RECEIVE
+			SET RECEIVE_READ = 2
+		WHERE MAIL_NO = #{mailNo}
+	</update>
+	
+	<update id="checkImportantAllMail" parameterType="receiveVO">
+		UPDATE RECEIVE
+			SET RECEIVE_CATEGORY = 2
+		WHERE MAIL_NO = #{mailNo}
+	</update>
+	
+	<update id="trashAllMail" parameterType="receiveVO">
+		UPDATE RECEIVE
+			SET RECEIVE_CATEGORY = 3
+		WHERE MAIL_NO = #{mailNo}
+	</update>
+	
+	<update id="clearImportantAllMail" parameterType="receiveVO">
+		UPDATE RECEIVE
+			SET RECEIVE_CATEGORY = 1
+		WHERE MAIL_NO = #{mailNo}
+	</update>
+	
+	<update id="deleteSendMail" parameterType="receiveVO">
+		UPDATE MAIL	
+			SET MAIL_DEL_YN = 'Y'
+		WHERE MAIL_NO = #{mailNo}
+	</update>
+	
+	<update id="allTrashClean" parameterType="int">
+		update receive 
+		    set RECEIVE_DEL_YN = 'Y'
+		WHERE RECEIVE_CATEGORY = 3
+		AND RECEIVE_EMP = ${empNo}
+	</update>
+	
+	
+	<delete id="deleteSaveMail" parameterType="int">
+		DELETE FROM MAIL WHERE MAIL_NO = #{mailNo}
+	</delete>
+	
+	<select id="selectAllMember" resultType="employeeVO">
+		SELECT * FROM EMPLOYEE 
+			WHERE EMP_FIREYN = 'N'
+		order by emp_no
+	</select>
+	
+</mapper>

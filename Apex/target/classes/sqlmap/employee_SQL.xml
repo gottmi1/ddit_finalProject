@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IEmployeeMapper">
+
+	<!-- 동적 쿼리 필요에따라서 수행 할 수도 안할 수도 있다 -->
+	 <sql id="empSearch">
+<!-- 	   <if test="searchType != null and searchType =='title'"> -->
+<!-- 	      and (bo_title like '%'||#{searchWord}||'%') -->
+<!-- 	   </if> -->
+		<if test="params.searchWord != null and params.searchWord != ''">
+			and e.emp_name LIKE '%' || #{params.searchWord} || '%'
+		</if>
+	</sql>
+	<sql id="profile">
+		<if test="empProfileimg != null and empProfileimg != ''">
+			emp_profileimg = #{empProfileimg},
+		</if>
+		<if test="positionNo != null and positionNo != ''">
+			position_no = #{positionNo, jdbcType=NUMERIC},
+		</if>
+		<if test="empId != null and empId != ''">
+			emp_id = #{empId},
+		</if>
+		<if test="empName != null and empName != ''">
+			emp_name = #{empName},
+		</if>
+		<if test="empPhone != null and empPhone != ''">
+			emp_Phone = #{empPhone},
+		</if>
+		<if test="empPw != null and empPw != ''">
+			emp_pw = #{empPw},
+		</if>
+		<if test="empMail != null and empMail != ''">
+			emp_mail = #{empMail},
+		</if>
+		<if test="empBirth != null and empBirth != ''">
+			emp_birth = #{empBirth},
+		</if>
+		<if test="empPostcode != null and empPostcode != ''">
+			emp_postcode = #{empPostcode},
+		</if>
+		<if test="empAddress1 != null and empAddress1 != ''">
+			emp_address1 = #{empAddress1},
+		</if>
+		<if test="empAddress2 != null and empAddress2 != ''">
+			emp_address2 = #{empAddress2},
+		</if>
+	</sql>
+
+	<resultMap type="employeeVO" id="employeeMap">
+		<id property="empNo" column="emp_no"/>
+		<result property="empNo" column="emp_no"/>
+		<result property="empId" column="emp_id"/>
+		<result property="positionNo" column="position_no"/>
+		<result property="positionName" column="position_name"/>
+		<result property="empPw" column="emp_pw"/>
+		<result property="empName" column="emp_name"/>
+		<result property="empPhone" column="emp_phone"/>
+		<result property="empMail" column="emp_mail"/>
+		<result property="empBirth" column="emp_birth"/>
+		<result property="empProfileimg" column="emp_profileimg"/>
+		<result property="empPostcode" column="emp_postcode"/>
+		<result property="empAddress1" column="emp_address1"/>
+		<result property="empAddress2" column="emp_address2"/>
+		<result property="empIndate" column="emp_indate"/>
+		<result property="empOutdate" column="emp_outdate"/>
+		<result property="empFireyn" column="emp_fireyn"/>
+		<collection property="employeeAuthList" resultMap="employeeAuthMap"/>
+		<collection property="proNoList" resultMap="membersMap"/>
+		<collection property="chatroomList" resultMap="chatEntryMap"/>
+	</resultMap>
+	
+	<resultMap type="employeeAuthVO" id="employeeAuthMap">
+		<result property="empNo" column="emp_no"/>
+		<result property="auth" column="auth"/>
+	</resultMap>
+	
+	<resultMap type="membersVO" id="membersMap">
+		<result property="empNo" column="emp_no"/>
+		<result property="proNo" column="pro_no"/>
+		<result property="proName" column="pro_name"/>
+	</resultMap>
+	
+	<resultMap type="chatEntryVO" id="chatEntryMap">
+		<result property="chatroomNo" column="chatroom_no"/>
+		<result property="empNo" column="emp_no"/>
+		<result property="chatStartno" column="chat_startno"/>
+		<result property="chatReadno" column="chat_readno"/>
+		<result property="chatTitle" column="chat_title"/>
+	</resultMap>
+	
+	<select id="keyupSearchEmpList" parameterType="string" resultType="EmployeeVO">
+		select 
+			EMP_NO, EMP_ID, POSITION_NO, EMP_PW, EMP_NAME, EMP_PHONE, 
+			EMP_MAIL, EMP_BIRTH, EMP_PROFILEIMG, EMP_POSTCODE, 
+			EMP_ADDRESS1, EMP_ADDRESS2, EMP_INDATE, EMP_OUTDATE, ENABLED, EMP_FIREYN
+		from 
+			employee
+		where emp_name like '%'||#{empNameObj}||'%'
+	</select>
+	
+	<!-- 시큐리티 인증 시, UserDetailsService 만들때 사용하는 쿼리임 -->
+	<!-- 퇴사처리된 사원은 로그인 불가 -->
+	<select id="readByUserId" parameterType="string" resultMap="employeeMap">
+		select 
+	    	e.emp_no, emp_id, e.position_no, emp_pw, emp_name, emp_phone, emp_mail, emp_birth, emp_profileimg,
+	    	emp_postcode, emp_address1, emp_address2, emp_indate, emp_outdate, enabled, emp_fireyn, auth, 
+	    	p.position_name as position_name , m.pro_no as pro_no, ce.chatroom_no, ce.chat_startno, ce.chat_readno, ce.chat_title
+	    from employee e 
+	    left outer join employee_auth ea on(e.emp_no = ea.emp_no)
+	    left outer join position p on(e.position_no = p.position_no)
+	    left outer join members m on(e.emp_no = m.emp_no)
+	    left outer join chat_entry ce on(ce.emp_no = e.emp_no)
+		where e.emp_id = ${empId}
+			and e.emp_fireyn = 'N'
+	</select>
+	
+	
+	
+	<!-- 관리자 - 사원목록 -->
+	<select id="empList" resultMap="employeeMap">
+		select 
+		     e.emp_no, emp_id, e.position_no, emp_pw, emp_name,
+		     emp_phone, emp_mail, emp_birth, emp_profileimg, emp_postcode,
+		     emp_address1, emp_address2, emp_indate, emp_outdate, enabled,
+		     emp_fireyn, auth, 
+		     p.position_name as position_name, m.pro_no as pro_no, pj.pro_name as pro_name
+		from employee e
+		left outer join employee_auth ea on(e.emp_no = ea.emp_no)
+		left outer join position p on(e.position_no = p.position_no)
+		left outer join members m on(e.emp_no = m.emp_no)
+		left outer join projects pj on(m.pro_no = pj.pro_no)
+		where 1=1
+		<include refid="empSearch"/>
+		order by emp_no asc
+	</select>
+	
+	<!-- 관리자 - 사원 상세보기 -->
+	<select id="getEmpByNo" parameterType="int" resultMap="employeeMap">
+		select 
+		     e.emp_no, emp_id, e.position_no, emp_pw, emp_name,
+		     emp_phone, emp_mail, emp_birth, emp_profileimg, emp_postcode,
+		     emp_address1, emp_address2, emp_indate, emp_outdate, enabled,
+		     emp_fireyn, auth, 
+		     p.position_name as position_name, m.pro_no as pro_no, pj.pro_name as pro_name
+		from employee e
+		left outer join employee_auth ea on(e.emp_no = ea.emp_no)
+		left outer join position p on(e.position_no = p.position_no)
+		left outer join members m on(e.emp_no = m.emp_no)
+		left outer join projects pj on(m.pro_no = pj.pro_no)
+		where e.emp_no = #{empNo}
+		order by emp_no asc
+	</select>
+	
+	<!-- 관리자 - 사원 수정 기능 -->
+	<!-- 수정버튼 진입시 > 수정일때는 등록 이벤트를 수정 이벤트로 변경한다.  -->
+	<update id="updateEmp" parameterType="employeeVO">
+		update employee
+		set
+			<include refid="profile"/>
+			emp_outdate = #{empOutdate, jdbcType=VARCHAR},
+			emp_fireyn = #{empFireyn}
+<!-- 			emp_id = #{empId} -->
+		where emp_no = #{empNo}
+	</update>
+	
+	<!-- 관리자 - 사원 등록 기능  -->
+	<!-- selectKey: employee 테이블의 pk 설정 -->
+	<insert id="insertEmp" parameterType="employeeVO" useGeneratedKeys="true">
+		<selectKey keyProperty="empNo" resultType="int" order="BEFORE">
+			select coalesce(max(emp_no), 0) + 1 FROM employee
+		</selectKey>
+		insert into employee(
+			emp_no, emp_id, position_no, emp_pw, emp_name, emp_phone, emp_mail, emp_birth, 
+			emp_profileimg, emp_postcode, emp_address1, emp_address2, emp_indate, emp_outdate, enabled, emp_fireyn
+		) values(
+			#{empNo}, #{empId}, #{positionNo}, #{empPw}, #{empName}, #{empPhone}, #{empMail}, #{empBirth},
+			#{empProfileimg}, #{empPostcode}, #{empAddress1}, #{empAddress2}, to_char(sysdate, 'YYYY-MM-DD'), '', 1, 'N'
+		)
+   </insert>
+   
+	<!-- 회원가입 요구사항 (한명의 회원은 하나의 권한을 무조건 가질수 있도록 권한 등록 - 스프링시큐리티 적용시) -->
+	<insert id="insertAuth" parameterType="int">
+		insert into employee_auth values('ROLE_USER',#{empNo})
+	</insert>
+	
+	<!-- 회원가입 페이지 - 중복확인 클릭 이벤트 메소드 -->
+	<select id="idCheck" parameterType="string" resultType="employeeVO">
+		select
+			emp_no, emp_id, position_no, emp_pw, emp_name, emp_phone, emp_mail, emp_birth, 
+			emp_profileimg, emp_postcode, emp_address1, emp_address2, emp_indate, emp_outdate, emp_fireyn
+		from employee
+		where emp_id = #{empId}
+	</select>
+	
+	<!-- 
+	목록에서 선택한 사원의 목록
+	downloadPDF2 
+	
+	//{"list":[1,2,3]}
+	-->
+	<select id="downloadPDF2" parameterType="hashMap" resultType="employeeVO">
+		SELECT EMP_NO, EMP_ID, POSITION_NO, EMP_PW, EMP_NAME, EMP_PHONE, EMP_MAIL, EMP_BIRTH, EMP_PROFILEIMG, EMP_POSTCODE, EMP_ADDRESS1, EMP_ADDRESS2, EMP_INDATE, EMP_OUTDATE, ENABLED, EMP_FIREYN
+		FROM   EMPLOYEE
+		WHERE  EMP_NO IN
+		<foreach collection="list" item="empNo" index="index"
+            separator="," open="(" close=")">
+            #{empNo}
+        </foreach>
+	</select>
+</mapper>
+
+
+
+
+
+
+
+
+
+

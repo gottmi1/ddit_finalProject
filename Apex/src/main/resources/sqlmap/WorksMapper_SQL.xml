@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IWorksMapper">
+	
+	<insert id="insertWork" parameterType="worksVO" useGeneratedKeys="true">
+		<selectKey resultType="int" keyProperty="workNo" order="BEFORE">
+			select seq_work.nextval from dual
+		</selectKey>
+		insert into works (
+			WORK_NO
+			,PRO_NO
+			,WORK_STATUS
+			,WORK_TITLE
+			,WORK_CONTENT
+			,WORK_FIRST
+			,WORK_DATE
+			,WORK_STARTDATE
+			,WORK_ENDDATE
+			,WORK_PROG
+			,WORK_PARENT_NO
+		)
+		values 
+		(
+			#{workNo}
+			, #{proNo}
+			, #{workStatus}
+			, #{workTitle}
+			, #{workContent}
+			, #{workFirst}
+			, SYSDATE
+			, #{workStartdate}
+			, #{workEnddate}
+			, #{workProg}
+			, #{workParentNo}
+		)
+	</insert>
+	
+	<delete id="deleteWork">
+		delete from works where work_no = #{workNo}
+	</delete>
+	
+	
+	
+	<delete id="deleteManager" parameterType="int">
+		delete from manager where work_no = #{workNo}
+	</delete>
+	
+	
+	<insert id="insertManager" parameterType="hashMap">
+		insert into manager (
+			MANAGER_NO, EMP_NO , WORK_NO
+		) values (
+			seq_manage.nextval, #{empNo} , #{workNo}
+		)
+	</insert>
+	
+	<insert id="insertNewFiles" parameterType="filesVO" useGeneratedKeys="true">
+		<selectKey resultType="int" keyProperty="fileNo" order="BEFORE">
+			select seq_file.nextval from dual
+		</selectKey>
+		insert into files (
+			FILE_NO, FILE_REGDATE, FILE_WHERE_NO, FILE_WHERE_PK
+		) values (
+			#{fileNo}, SYSDATE, #{fileWhereNo}, #{fileWherePk}
+		)
+	</insert>
+	
+	<insert id="insertWorkFile" parameterType="fileDetailVO">
+		insert into FILE_DETAIL (
+			FILE_DETAIL_NO
+			, FILE_NO
+			, FILE_SAVE_NAME
+			, FILE_ORIGIN_NAME
+			, FILE_SIZE
+			, FILE_URL
+			, FILE_MIME
+			, FILE_FANCYSIZE
+		) values (
+			seq_file_detail.nextval
+			, #{fileNo}
+			, #{fileSaveName}
+			, #{fileOriginName}
+			, #{fileSize}
+			, #{fileUrl}
+			, #{fileMime}
+			, #{fileFancysize}
+		)
+	</insert>
+	
+	<select id="list" parameterType="kr.or.ddit.vo.PaginationInfoVO" resultType="worksVO">
+		select t.*
+		  from (select row_number() over(order by WORK_NO desc) rnum
+			         , WORK_NO
+					 , PRO_NO
+					 , WORK_STATUS
+					 , WORK_TITLE
+					 , WORK_CONTENT
+					,WORK_FIRST
+					,WORK_DATE
+					,WORK_STARTDATE
+					,WORK_ENDDATE
+					,WORK_PROG
+					,WORK_PARENT_NO
+			      from works
+			      WHERE PRO_NO = #{proNo}
+			      <if test="searchWord != null">
+			      AND WORK_TITLE like '%'||#{searchWord}||'%'
+			      </if>
+			      <if test="workStatus != 0">
+		  		  	AND WORK_STATUS = #{workStatus}
+		  		  </if>
+		) t
+		where t.rnum between (#{currentPage} * 10) - (10 - 1) and (#{currentPage} * 10)
+	</select>
+	
+	<select id="selectWorksCount" parameterType="pagingVO" resultType="int">
+		select count(*)
+  		  from works
+  		  where pro_no = #{proNo}
+  		  <if test="workStatus != 0">
+  		  	AND WORK_STATUS = #{workStatus}
+  		  </if>
+  		  <if test="searchWord != null">
+		      AND WORK_TITLE like '%'||#{searchWord}||'%'
+	      </if>
+	</select>
+
+
+
+
+
+
+
+
+
+	
+	<select id="selectCurrentFileNo" parameterType="hashMap" resultType="Integer">
+		select 
+			COALESCE(MAX(file_No), 0)
+		from files 
+		where FILE_WHERE_NO = #{whereNo}
+		and FILE_WHERE_PK = #{workNo}
+	</select>
+	
+	<select id="selectCurrentFileList" parameterType="int" resultType="fileDetailVO">
+		select 
+			*
+		from file_detail 
+		where file_no = #{fileNo}
+	</select>
+	
+	<select id="selectWorksDetail" parameterType="int" resultType="worksVO">
+		select 
+			*
+		from works
+		where WORK_NO = #{workNo}
+	</select>
+	
+	<select id="selectChildWorksList" parameterType="int" resultType="worksVO">
+		select 
+			*
+		from works
+		where WORK_PARENT_NO = #{workNo}
+	</select>
+	
+	<select id="selectManagerList" parameterType="int" resultType="managerVO">
+		select 
+			* 
+		from manager
+		where work_no = #{workNo}
+	</select>
+	
+	<select id="selectAllManagerList" resultType="managerVO">
+		select 
+			* 
+		from manager
+		order by emp_no
+	</select>
+	
+	<select id="selectEmpList" resultType="employeeVO">
+		select 
+			* 
+		from employee
+	</select>
+	
+	<select id="selectManagerNameList" parameterType="java.util.List" resultType="employeeVO">
+		SELECT 
+			* 
+		FROM employee
+        WHERE EMP_NO IN
+		<foreach item="managerVO" index="index" collection="list" open="(" separator="," close=")">
+            #{managerVO.empNo}
+        </foreach>
+	</select>
+	
+	<select id="selectChildManagerList" parameterType="java.util.List" resultType="managerVO">
+		select 
+			* 
+		from manager
+		where work_no IN
+		<foreach item="childWork" index="index" collection="list" open="(" separator="," close=")">
+            #{childWork.workNo}
+        </foreach>
+	</select>
+	
+	
+	
+	
+	
+	<select id="selectComment" parameterType="int" resultType="workCommentVO">
+		SELECT 
+			*
+		FROM WORK_COMMENT
+		WHERE WORK_NO = #{workNo}
+		order by WORK_CO_NO
+	</select>
+	
+	
+	<insert id="addComment" parameterType="workCommentVO">
+		insert into WORK_COMMENT 
+		(
+			WORK_CO_NO, WORK_NO, WORK_CO_WRITER, WORK_CO_CONTENT, WORK_CO_DATE
+			<if test="workCoParentNo != 0">
+    			, WORK_CO_PARENT_NO
+  			</if>
+		)
+		values
+		(
+			SEQ_WORK_COMM.nextval, #{workNo}, #{workCoWriter}, #{workCoContent}, SYSDATE
+			<if test="workCoParentNo != 0">
+    			, #{workCoParentNo}
+  			</if>
+		)
+		
+	</insert>
+	
+	<update id="modifyComment" parameterType="workCommentVO">
+		UPDATE WORK_COMMENT
+			SET WORK_CO_CONTENT = #{workCoContent}
+		WHERE WORK_CO_NO = #{workCoNo}
+	</update>
+	
+	<update id="deleteComment">
+		UPDATE WORK_COMMENT
+			SET WORK_CO_CONTENT = 'Deleted comments'
+		WHERE WORK_CO_NO = #{workCoNo}
+	</update>
+	
+	<delete id="realDeleteComment" parameterType="int">
+		DELETE FROM WORK_COMMENT
+			WHERE WORK_NO = #{workNo}
+	</delete>
+	
+	<select id="selectFiles" parameterType="hashMap" resultType="filesVO">
+		SELECT 
+			* 
+		FROM FILES 
+		WHERE FILE_WHERE_NO = #{whereNo}
+		AND FILE_WHERE_PK = #{wherePk}
+	</select>
+	
+	<delete id="deleteFile" parameterType="int">
+		delete from file_detail where file_no = #{fileNo}
+	</delete>
+	
+	<delete id="deleteFiles" parameterType="int">
+		delete from files where file_no = #{fileNo}
+	</delete>
+	
+	<update id="modifyWork" parameterType="worksVO" >
+		UPDATE WORKS 
+		SET WORK_STATUS = #{workStatus}
+			, WORK_TITLE = #{workTitle}
+			, WORK_CONTENT = #{workContent}
+			, WORK_FIRST = #{workFirst}
+			, WORK_DATE = SYSDATE
+			, WORK_STARTDATE = #{workStartdate}
+			, WORK_ENDDATE = #{workEnddate}
+			, WORK_PROG = #{workProg}
+		WHERE WORK_NO = #{workNo}
+	</update>
+	
+	<select id="selectProjectMember" parameterType="int" resultType="employeeVO">
+		SELECT 
+		    E.EMP_NO
+		    ,E.EMP_ID
+		    ,E.POSITION_NO
+		    ,E.EMP_NAME
+		FROM  EMPLOYEE E, MEMBERS M
+		WHERE E.EMP_NO = M.EMP_NO
+		AND M.PRO_NO = #{empNo}
+	</select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

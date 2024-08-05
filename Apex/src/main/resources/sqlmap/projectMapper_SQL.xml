@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IProjectMapper">
+
+	<insert id="createProject" parameterType="projectsVO" useGeneratedKeys="true">
+		<selectKey resultType="int" keyProperty="proNo" order="BEFORE">
+			select SEQ_PRO.nextval from dual
+		</selectKey>
+		insert into projects (
+					    PRO_NO
+					    ,PRO_NAME
+					    ,PRO_CONTENT
+					    ,PRO_STARTDATE
+					    ,PRO_ENDDATE
+					    ,PRO_STATUS
+					    ,PRO_LEADER
+					)
+					values (
+					#{proNo}
+					,#{proName}
+					,#{proContent}
+					,SYSDATE
+					,TO_DATE(#{proEnddate},'YYYY-MM-DD')
+					,1
+					,#{proLeader}
+					)
+	</insert>
+	
+	<select id="selectProNoFromMemberTable" parameterType="int" resultType="int">
+		select 
+			PRO_NO 
+		FROM MEMBERS 
+		WHERE EMP_NO = #{empNo}
+	</select>
+	
+	<select id="selectMyProject" parameterType="java.util.List" resultType="projectsVO">
+		select 
+			* 
+		from projects
+		where pro_no in 
+    	<foreach item="proNo" collection="list" open="(" separator="," close=")">
+       		#{proNo}
+    	</foreach>
+    	and pro_status != 1
+    	order by pro_no
+	</select>
+	
+	<select id="selectAllMember" resultType="employeeVO">
+		select 
+			*
+		from employee
+		where 1 = 1 
+		and EMP_FIREYN = 'N'
+		order by emp_no
+	</select>
+	
+	<select id="addEntryMember" parameterType="int" resultType="employeeVO">
+		select 
+			*
+		from employee
+		where emp_no = #{empNo}
+	</select>
+	
+	<insert id="addProjectMember" parameterType="hashMap">
+		INSERT INTO MEMBERS (EMP_NO , PRO_NO)
+		VALUES (#{empNo}, #{proNo}) 
+	</insert>
+	
+	
+	<select id="selectAllProject" resultType="projectsVO" parameterType="hashMap">
+		SELECT 
+			*
+		FROM PROJECTS
+		WHERE 1 = 1
+		<if test="filter == 2">
+			AND PRO_STATUS = 1
+		</if>
+		<if test="filter == 3">
+			AND PRO_STATUS = 2
+		</if>
+		<if test="filter == 4">
+			AND PRO_STATUS = 3
+		</if>
+		<if test="filter == 5">
+			AND PRO_STATUS = 4
+		</if>
+		ORDER BY PRO_NO
+	</select>
+	
+	<select id="selectProject" parameterType="int" resultType="projectsVO">
+		select
+			PRO_NO,
+			PRO_NAME,
+			PRO_CONTENT,
+			PRO_STARTDATE,
+			PRO_ENDDATE,
+			PRO_STATUS,
+			PRO_REJECT_REASON,
+			PRO_LEADER
+		from projects
+		where pro_no = #{proNo}
+	</select>
+	
+	<update id="approveProject" parameterType="int">
+		update projects
+		set pro_status = 2
+		where pro_no = #{proNo}
+	</update>
+	
+	<update id="companionProject" parameterType="projectsVO">
+		update projects
+		set pro_status = 3,
+			pro_reject_reason = #{proRejectReason}
+		where pro_no = #{proNo}	
+	</update>
+	
+	<insert id="createCloudFolder" parameterType="projectsVO">
+		INSERT INTO FOLDER
+			(
+			    FOLDER_NO
+			    ,PRO_NO
+			    ,FOLDER_NAME
+			) VALUES
+			(
+			    seq_folder.nextval,
+			    #{proNo},
+			    'Root'
+			)
+	</insert>
+	
+	<!-- ====================================================================================== -->
+	
+	<!-- 프로젝트 완료보고서용 '프로젝트' 가져오기 -->
+	<select id="getProjects" parameterType="String" resultType="projectReportVO">
+		SELECT 
+		    p.PRO_NO,
+		    p.PRO_NAME,
+		    p.PRO_CONTENT,
+		    p.PRO_STARTDATE,
+		    p.PRO_ENDDATE,
+		    p.PRO_STATUS,
+		    p.PRO_REJECT_REASON,
+		    (SELECT LISTAGG(e.emp_name, ', ') WITHIN GROUP (ORDER BY e.emp_name)
+		     FROM employee e
+		     WHERE e.emp_no = p.PRO_LEADER) AS HIS_PRO_LEADER_NAME,
+		    (SELECT LISTAGG(e.EMP_NAME, ', ') WITHIN GROUP (ORDER BY e.EMP_NAME)
+		     FROM members m
+		     JOIN employee e ON m.EMP_NO = e.EMP_NO
+		     WHERE m.PRO_NO = p.PRO_NO) AS HIS_PRO_MEMBER_LIST,
+		    (SELECT COUNT(*)
+		     FROM members m
+		     WHERE m.PRO_NO = p.PRO_NO) AS PRO_MEMBER_COUNT
+		FROM 
+		    projects p
+		where p.pro_no = #{pro_no}
+<!-- 		where p.pro_status = #{p.pro_status} -->
+	</select>
+	
+	<!-- 프로젝트 완료보고서용 '해당 프로젝트의 일감들' 가져오기 -->
+	<select id="getWorks" parameterType="String" resultType="worksVO">
+		SELECT 
+		    w.WORK_NO,
+		    w.WORK_STATUS,
+		    w.WORK_TITLE,
+		    w.WORK_CONTENT,
+		    w.WORK_FIRST,
+		    w.WORK_DATE,
+		    w.WORK_STARTDATE,
+		    w.WORK_ENDDATE,
+		    w.WORK_PROG,
+		    w.WORK_PARENT_NO,
+		    (SELECT LISTAGG(e.EMP_NAME, ', ') WITHIN GROUP (ORDER BY e.EMP_NAME)
+		     FROM manager m
+		     JOIN employee e ON m.EMP_NO = e.EMP_NO
+		     WHERE m.WORK_NO = w.WORK_NO) AS WORK_MANAGER_LIST,
+		     (SELECT COUNT(*)
+		     FROM manager m
+		     WHERE m.WORK_NO = w.WORK_NO) AS WORK_MANAGER_COUNT
+		FROM 
+		    works w 
+		where w.pro_no = #{pro_no}
+	</select>
+	
+	<!-- 프로젝트 완료보고서 PDF 미리보기 -->
+	<select id="getReport" parameterType="String" resultType="projectReportVO">
+		SELECT 
+		    p.PRO_NO,
+		    p.PRO_NAME,
+		    p.PRO_CONTENT,
+		    p.PRO_STARTDATE,
+		    p.PRO_ENDDATE,
+		    p.PRO_STATUS,
+		    p.PRO_REJECT_REASON,
+		    (SELECT LISTAGG(e.emp_name, ', ') WITHIN GROUP (ORDER BY e.emp_name)
+		     FROM employee e
+		     WHERE e.emp_no = p.PRO_LEADER) AS HIS_PRO_LEADER_NAME,
+		    (SELECT LISTAGG(e.EMP_NAME, ', ') WITHIN GROUP (ORDER BY e.EMP_NAME)
+		     FROM members m
+		     JOIN employee e ON m.EMP_NO = e.EMP_NO
+		     WHERE m.PRO_NO = p.PRO_NO) AS HIS_PRO_MEMBER_LIST,
+		    (SELECT COUNT(*)
+		     FROM members m
+		     WHERE m.PRO_NO = p.PRO_NO) AS PRO_MEMBER_COUNT,
+		     w.WORK_NO,
+		    w.WORK_STATUS,
+		    w.WORK_TITLE,
+		    w.WORK_CONTENT,
+		    w.WORK_FIRST,
+		    w.WORK_DATE,
+		    to_date(w.WORK_STARTDATE, 'yyyymmdd') WORK_STARTDATE, 
+		    to_date(w.WORK_ENDDATE, 'yyyymmdd') WORK_ENDDATE,
+<!-- 		    w.WORK_STARTDATE, -->
+<!-- 		    w.WORK_ENDDATE, -->
+		    w.WORK_PROG,
+		    w.WORK_PARENT_NO,
+		    (SELECT LISTAGG(e.EMP_NAME, ', ') WITHIN GROUP (ORDER BY e.EMP_NAME)
+		     FROM manager m
+		     JOIN employee e ON m.EMP_NO = e.EMP_NO
+		     WHERE m.WORK_NO = w.WORK_NO) AS WORK_MANAGER_LIST,
+		     (SELECT COUNT(*)
+		     FROM manager m
+		     WHERE m.WORK_NO = w.WORK_NO) AS WORK_MANAGER_COUNT
+		FROM 
+		    projects p
+		LEFT JOIN 
+		    works w ON p.PRO_NO = w.PRO_NO
+		where p.pro_no = #{p.pro_no}
+<!-- 		where p.pro_status = #{p.pro_status} -->
+	</select>
+	
+	<!-- ====================================================================================== -->
+	
+</mapper>

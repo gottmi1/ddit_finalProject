@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IAdnoticeMapper">
+
+	<sql id="noticeSearch">
+		<if test="searchType != null and searchType == 'title'">
+			and(notice_title like '%' || #{searchWord} || '%')
+		</if>
+		<if test="searchType != null and searchType == 'writer'">
+			and(notice_writer like '%' || #{searchWord} || '%')
+		</if>
+	</sql>
+	
+	<select id="selectNoticeCount" resultType="int">
+		select count(*)
+  		from notice
+ 		where 1=1
+ 		and project_no = #{searchVO.projectNo}
+ 		<include refid="noticeSearch"/>
+	</select>
+	
+	<select id="list" parameterType="kr.or.ddit.vo.PaginationInfoVO" resultType="noticeVO">
+		select t.*
+		from (
+		    select row_number() over(order by notice_no desc) rnum
+		         , notice_no
+		         , project_no
+		         , notice_title
+		         , notice_date
+		         , notice_hit
+		         , notice_moddate
+		         , (select emp_name from employee where emp_no = notice_writer) as "noticeWriter"
+		    from notice b
+		) t
+		where project_no = #{searchVO.projectNo}
+		<include refid="noticeSearch"/>
+		<![CDATA[
+			and rnum >= #{startRow} and rnum <= #{endRow}
+		]]>
+	</select>
+	
+	 <insert id="insertNotice" parameterType="kr.or.ddit.vo.NoticeVO" useGeneratedKeys="true">
+	 	<selectKey keyProperty="noticeNo" resultType="int" order="BEFORE">
+	 		select seq_notice.nextval from dual
+	 	</selectKey>
+        insert into notice (notice_no, project_no, notice_title, notice_content, notice_date, notice_writer, notice_hit)
+        values (#{noticeNo}, #{projectNo}, #{noticeTitle}, #{noticeContent}, sysdate, #{noticeWriter}, #{noticeHit})
+    </insert>
+	
+	<select id="selectProjectLeader" parameterType="int" resultType="String">
+		select emp_id
+        from employee
+        where emp_no = (
+            select pro_leader
+            from projects
+            where pro_no = #{projectNo}
+        )
+		
+    </select>
+	
+	<select id="detail" resultType="kr.or.ddit.vo.NoticeVO">
+	    select notice_no, notice_title, notice_date, notice_hit, notice_content, project_no, notice_moddate,
+	    (select emp_name from employee where emp_no = notice_writer) as "noticeWriter", notice_writer as "empNo"
+	    from notice
+	    where notice_no = #{noticeNo}
+	</select>
+	
+	<update id="incrementHit" parameterType="int">
+		update notice
+		set
+			notice_hit = notice_hit + 1
+		where notice_no = #{noticeNo}
+	</update>
+	
+	<delete id="deleteNotice" parameterType="int">
+        delete from notice
+        where notice_no = #{noticeNo}
+    </delete>
+    
+    <select id="detailNotice" parameterType="int" resultType="kr.or.ddit.vo.NoticeVO">
+        select 
+            notice_no as noticeNo, 
+            project_no as projectNo, 
+            notice_title as noticeTitle, 
+            notice_content as noticeContent, 
+            notice_date as noticeDate, 
+            notice_writer as noticeWriter,
+            notice_moddate as noticeModdate 
+        from 
+            notice 
+        where 
+            notice_no = #{noticeNo}
+    </select>
+    
+    <update id="updateNotice" parameterType="kr.or.ddit.vo.NoticeVO">
+	    update notice
+	    set 
+	        notice_title = #{noticeTitle},
+	        notice_content = #{noticeContent},
+	        notice_moddate = sysdate
+	    where notice_no = #{noticeNo}
+	</update>
+	
+	<select id="getEmployeeByEmpNo" parameterType="int" resultType="employeeVO">
+		select 
+			EMP_NO
+			,EMP_ID
+			,POSITION_NO
+			,EMP_PW
+			,EMP_NAME
+			,EMP_PHONE
+			,EMP_MAIL
+			,EMP_BIRTH
+			,EMP_PROFILEIMG
+			,EMP_POSTCODE
+			,EMP_ADDRESS1
+			,EMP_ADDRESS2
+			,EMP_INDATE
+			,EMP_OUTDATE
+			,ENABLED
+			,EMP_FIREYN
+		from employee
+		where emp_no = #{empNo}			
+	
+	</select>
+	
+
+</mapper>

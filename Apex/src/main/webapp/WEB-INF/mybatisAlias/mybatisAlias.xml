@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+  PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	
+	<settings>
+		<setting name="mapUnderscoreToCamelCase" value="true"/>
+	</settings>
+	
+	<typeAliases>
+		<typeAlias type="kr.or.ddit.vo.AlarmToVO" alias="alarmToVO"/>
+		<typeAlias type="kr.or.ddit.vo.AlarmVO" alias="alarmVO"/>
+		<typeAlias type="kr.or.ddit.vo.ArmCategoryVO" alias="armCategoryVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.BoardCommentVO" alias="boardCommentVO"/>
+		<typeAlias type="kr.or.ddit.vo.BoardVO" alias="boardVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.CalendarVO" alias="calendarVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.ChatEntryVO" alias="chatEntryVO"/>
+		<typeAlias type="kr.or.ddit.vo.ChatroomVO" alias="chatroomVO"/>
+		<typeAlias type="kr.or.ddit.vo.ChatVO" alias="chatVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.CloudVO" alias="cloudVO"/>
+		<typeAlias type="kr.or.ddit.vo.FolderVO" alias="folderVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.PaginationInfoVO" alias="pagingVO"/>
+		
+		
+		<typeAlias type="kr.or.ddit.vo.EmployeeAuthVO" alias="employeeAuthVO"/>
+		<typeAlias type="kr.or.ddit.vo.EmployeeVO" alias="employeeVO"/>
+		<typeAlias type="kr.or.ddit.vo.PositionVO" alias="positionVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.FileDetailVO" alias="fileDetailVO"/>
+		<typeAlias type="kr.or.ddit.vo.FilesVO" alias="filesVO"/>
+		<typeAlias type="kr.or.ddit.vo.FileWhereVO" alias="fileWhereVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.HistoryVO" alias="historyVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.MailVO" alias="mailVO"/>
+		<typeAlias type="kr.or.ddit.vo.ReceiveVO" alias="receiveVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.NoticeVO" alias="noticeVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.ReportVO" alias="reportVO"/>
+		<typeAlias type="kr.or.ddit.vo.ReportCommentVO" alias="reportCommentVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.VideoEntryVO" alias="videoEntryVO"/>
+		<typeAlias type="kr.or.ddit.vo.VideoVO" alias="videoVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.ManagerVO" alias="managerVO"/>
+		<typeAlias type="kr.or.ddit.vo.MembersVO" alias="membersVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.ProjectsVO" alias="projectsVO"/>
+		<typeAlias type="kr.or.ddit.vo.WorkCommentVO" alias="workCommentVO"/>
+		<typeAlias type="kr.or.ddit.vo.WorkStatusVO" alias="workStatusVO"/>
+		<typeAlias type="kr.or.ddit.vo.WorksVO" alias="worksVO"/>
+		<typeAlias type="kr.or.ddit.vo.IssueVO" alias="issueVO"/>
+		
+		<typeAlias type="kr.or.ddit.vo.ProjectReportVO" alias="projectReportVO"/>
+		
+
+		
+	</typeAliases>
+
+</configuration>

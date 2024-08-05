@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN" "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+	<!-- tiles layout 적용 정의부 -->
+	<definition name="layout" template="/WEB-INF/views/tiles/layout/layout.jsp">
+		<put-attribute name="header" value="/WEB-INF/views/tiles/tile/header.jsp"/>
+		<put-attribute name="body" value=""/>
+		<put-attribute name="sidebar" value="/WEB-INF/views/tiles/tile/sidebar.jsp"/>
+		<put-attribute name="gnb" value="/WEB-INF/views/tiles/tile/gnb.jsp"/>
+		<put-attribute name="chat" value="/WEB-INF/views/chat/chat.jsp"/>
+	</definition>
+	
+	<definition name="*" extends="layout">
+		<put-attribute name="body" value="/WEB-INF/views/{1}.jsp"/>
+	</definition>
+	
+	
+	<!-- tiles 적용 제외 부분 정의부 -->
+	<definition name="empty" template ="/WEB-INF/views/tiles/layout/empty.jsp">
+		<put-attribute name="body" value=""/>
+	</definition>
+	
+	<definition name="login/loginForm" extends ="empty">
+		<put-attribute name="body" value ="/WEB-INF/views/login/loginForm.jsp"/>
+		<!-- 아이디/비밀번호 찾기, 회원가입 폼등도 여기 들어가면 됨. -->
+	</definition>
+	
+	<definition name="findIdPw/*" extends ="empty">
+		<put-attribute name="body" value ="/WEB-INF/views/findIdPw/{1}.jsp"/>
+	</definition>
+
+	<!-- 첫번째 *에 들어가는 키워드가 {1}에 들어가고, 만약 notice/*/*로 설정시 두번째 *에 들어가는 키워드는 {2}에 들어감 -->
+
+	<definition name="layout2" template="/WEB-INF/views/tiles/layout/layout.jsp">
+		<put-attribute name="header" value="/WEB-INF/views/tiles/tile/header.jsp"/>
+		<put-attribute name="body" value=""/>
+		<put-attribute name="sidebar" value="/WEB-INF/views/tiles/tile/sidebar.jsp"/>
+		<put-attribute name="gnb" value="/WEB-INF/views/tiles/tile/gnb.jsp"/>
+		<put-attribute name="chat" value="/WEB-INF/views/chat/chat.jsp"/>
+	</definition>
+	
+	<!-- 
+		forwarding
+		return "board/list";
+	 -->
+	<definition name="*/*" extends="layout2">
+		<put-attribute name="body" value="/WEB-INF/views/{1}/{2}.jsp"/>
+	</definition>
+	
+	<definition name="layout3" template="/WEB-INF/views/tiles/layout/layout.jsp">
+		<put-attribute name="header" value="/WEB-INF/views/tiles/tile/header.jsp"/>
+		<put-attribute name="body" value=""/>
+		<put-attribute name="sidebar" value="/WEB-INF/views/tiles/tile/sidebar.jsp"/>
+		<put-attribute name="gnb" value="/WEB-INF/views/tiles/tile/gnb.jsp"/>
+		<put-attribute name="chat" value="/WEB-INF/views/chat/chat.jsp"/>
+	</definition>
+	
+	<definition name="*/*/*" extends="layout3">
+		<put-attribute name="body" value="/WEB-INF/views/{1}/{2}/{3}.jsp"/>
+	</definition>
+</tiles-definitions>

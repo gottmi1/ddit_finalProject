@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IGanttMapper">
+
+	
+	 <resultMap id="worksVOResultMap" type="WorksVO">
+	    <id property="workNo" column="work_no"/>
+	    <result property="proNo" column="pro_no"/>
+	    <result property="workStatus" column="work_status"/>
+	    <result property="workTitle" column="work_title"/>
+	    <result property="workContent" column="work_content"/>
+	    <result property="workFirst" column="work_first"/>
+	    <result property="workDate" column="work_date"/>
+	    <result property="workStartdate" column="work_startdate"/>
+	    <result property="workEnddate" column="work_enddate"/>
+	    <result property="workProg" column="work_prog"/>
+	    <result property="workParentNo" column="work_parent_no"/>
+	    <!-- 추가 필드 매핑 -->
+	    <result property="workFirstName" column="work_first_name"/>
+	    
+	    <collection property="workCommentList" resultMap="workCommentVOResultMap">
+	    </collection>
+	    <collection property="managerList" resultMap="managerVOResultMap">
+	    </collection>
+	</resultMap>
+	
+	
+	<resultMap id="workCommentVOResultMap" type="WorkCommentVO">
+	    <id property="workCoNo" column="work_co_no"/>
+	    <result property="workNo" column="work_no"/>
+	    <result property="workCoWriter" column="work_co_writer"/>
+	    <result property="workCoContent" column="work_co_content"/>
+	    <result property="workCoDate" column="work_co_date"/>
+	    <result property="workCoParentNo" column="work_co_parent_no"/>
+	    <result property="workCoModdate" column="work_co_moddate"/>
+	</resultMap>
+	
+	
+	<resultMap id="managerVOResultMap" type="ManagerVO">
+	    <id property="managerNo" column="manager_no"/>
+	    <result property="workNo" column="work_no"/>
+	    <result property="empNo" column="emp_no"/>
+	    <!-- 필요한 다른 필드들 -->
+	</resultMap>
+
+	<!-- 일감 목록 조회 -->
+	<select id="ganttChart" parameterType="int" resultType="worksVO">
+		select 
+			pro_no , work_parent_no, work_no , work_status, 
+   			work_title, work_content, work_first, work_prog,
+    		work_date, work_startdate, work_enddate
+		from works
+		where pro_no = #{proNo}
+	</select>
+	
+	<select id="workListByProNo" parameterType="int" resultType="worksVO">
+		WITH OrderedWorks AS (
+		    SELECT 
+		        WORK_NO,
+		        PRO_NO,
+		        WORK_STATUS,
+		        WORK_TITLE,
+		        WORK_CONTENT,
+		        WORK_FIRST,
+		        WORK_DATE,
+		        WORK_STARTDATE,
+		        WORK_ENDDATE,
+		        WORK_PROG,
+		        WORK_PARENT_NO,
+		        WORK_CNT as worksCnt
+		    FROM works
+		    WHERE pro_no = #{proNo}
+		)
+		SELECT 
+		    ow.WORK_NO,
+		    ow.PRO_NO,
+		    ow.WORK_STATUS,
+		    ow.WORK_TITLE,
+		    ow.WORK_CONTENT,
+		    ow.WORK_FIRST,
+		    ow.WORK_DATE,
+		    ow.WORK_STARTDATE,
+		    ow.WORK_ENDDATE,
+		    ow.WORK_PROG,
+		    ow.WORK_PARENT_NO,
+		    ow.worksCnt
+		FROM OrderedWorks ow
+		LEFT JOIN OrderedWorks parent ON ow.WORK_PARENT_NO = parent.WORK_NO
+		ORDER BY COALESCE(parent.WORK_NO, ow.WORK_NO), ow.WORK_NO
+	</select>
+	
+	
+	<select id="workDetailByWorkNo" parameterType="int" resultType="worksVO">
+		select
+			W.WORK_NO
+			,W.PRO_NO
+			,W.WORK_STATUS
+			,W.WORK_TITLE
+			,W.WORK_CONTENT
+			,W.WORK_FIRST
+			,W.WORK_DATE
+			,W.WORK_STARTDATE
+			,W.WORK_ENDDATE
+			,W.WORK_PROG
+			,W.WORK_PARENT_NO
+			,W.WORK_CNT as worksCnt
+		from works W
+		where work_no = #{workNo}
+		
+	</select>
+	
+	<select id="findManager" parameterType="int" resultType="managerVO">
+		select 
+			manager_no,
+			work_no,
+			emp_no
+		from manager
+		where work_no = #{workNo}
+	</select>
+	
+	<select id="findManagerDetail" parameterType="int" resultType="employeeVO">
+		select
+		 e.emp_no, 
+		 e.emp_name,
+		 e.emp_id,
+		 e.position_no,
+		 e.emp_profileimg
+
+		  from employee e
+		  left outer join manager m on(m.emp_no = e.emp_no)
+		  where m.work_no = #{workNo}
+	</select>	
+	
+	<select id="findProName" parameterType="int" resultType="string">
+		select
+			pro_name
+		from projects
+		where pro_no = #{proNo}
+	</select>
+
+
+</mapper>

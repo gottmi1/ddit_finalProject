@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IAlarmMapper">
+	
+	<insert id="insertAlarm" parameterType="alarmVO">
+		insert into alarm (
+			arm_no, arm_content, arm_date, arm_category_no
+		)
+		values (
+			SEQ_ARM.nextVal, #{armContent}, sysdate, #{armCategoryNo}
+		)
+	
+	</insert>
+	
+	<select id="findAlarmNo" resultType="int">
+		select SEQ_ARM.currVal from dual
+	</select>
+	
+	
+	<insert id="insertAlarmTo" parameterType="alarmToVO">
+		insert into alarm_to (
+			arm_no, emp_no
+		) values (
+			#{armNo}, #{empNo}
+		)
+	</insert>
+	
+	<select id="showMyAlarm" parameterType="int" resultType="alarmVO">
+		select 
+			a.arm_no, a.arm_content, a.arm_date, a.arm_category_no
+		from 
+			alarm_to alt
+			left outer join alarm a on(a.arm_no = alt.arm_no)
+		where 
+			alt.emp_no = #{empNo} and
+			alt.arm_to_readyn = 'N'
+		order by a.arm_no desc		
+	
+	</select>
+	
+	<select id="findWorkName" parameterType="int" resultType="string">
+		select
+			work_title
+		from works
+		where work_no = #{workNo}
+	</select>
+	
+	<update id="alarmRemove" parameterType="int">
+		update alarm_to
+		set arm_to_readyn = 'Y'
+		where emp_no = #{empNo} 
+	
+	</update>
+	
+	<update id="alarmDetailRemove" parameterType="alarmToVO">
+		update alarm_to
+		set arm_to_readyn = 'Y'
+		where emp_no = #{empNo}
+		and arm_no = #{armNo}
+	
+	</update>
+	
+	<select id="findProjectByProNo" parameterType="int" resultType="projectsVO">
+		select 
+			PRO_NO,
+			PRO_NAME,
+			PRO_CONTENT,
+			PRO_STARTDATE,
+			PRO_ENDDATE,
+			PRO_STATUS,
+			PRO_REJECT_REASON,
+			PRO_LEADER
+		from projects
+		where pro_no = #{proNo}
+	</select>
+	
+	<select id="findMemberByProNo" parameterType="int" resultType="membersVO">
+		select
+			emp_no,
+			pro_no
+		from members
+		where pro_no = #{proNo}
+			
+	
+	</select>
+	
+	<select id="newAlarmList" parameterType="int" resultType="alarmToVO">
+		select 
+			arm_no,
+			emp_no
+		from alarm_to
+		where emp_no = #{empNo}
+		and arm_to_yn = 'N'		
+	
+	</select>
+	
+	<update id="changeYN" parameterType="int">
+		update alarm_to
+		set arm_to_yn = 'Y'
+		where emp_no = #{empNo}
+	</update>
+	
+	<select id="findManagerList" parameterType="int" resultType="int">
+		select emp_no
+		from manager
+		where work_no = #{workNo}
+	</select>
+	
+	<select id="getAllEmpNo" resultType="int">
+		select emp_no
+		from employee
+		
+	</select>
+
+</mapper>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IDashboardMapper">
+	<!-- 총 작업 개수 가져오기 -->
+	<select id="getTotalWorksCount" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*) FROM WORKS
+		WHERE PRO_NO = #{proNo}
+	</select>
+	
+	<!-- 미완료 작업 개수 가져오기 -->
+	<select id="countWorksByMultipleStatus" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*) FROM WORKS WHERE WORK_STATUS IN
+		<foreach item="status" index="index" collection="statusArr" open="(" separator="," close=")">
+			#{status}
+		</foreach>
+		AND PRO_NO = #{proNo}
+	</select>
+	
+	<!-- 완료 작업 개수 가져오기 -->
+	<select id="countWorksByStatus" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*) FROM WORKS WHERE WORK_STATUS = #{status}
+		AND PRO_NO = #{proNo}
+	</select>
+	
+	<!-- 마감일이 지난 작업 개수 가져오기 -->
+	<select id="countOverdueWorks" parameterType="hashMap" resultType="int">
+		<![CDATA[
+        SELECT COUNT(*) FROM WORKS 
+        WHERE 
+        CASE 
+            WHEN REGEXP_LIKE(WORK_ENDDATE, '^\d{4}\d{2}\d{2}$') THEN TO_DATE(WORK_ENDDATE, 'YYYYMMDD')
+        END < SYSDATE 
+        AND WORK_STATUS != 3
+        AND PRO_NO = #{proNo}
+        ]]>
+	</select>
+	
+	<!-- 담당자별 예정된 작업 수 가져오기 -->
+	<select id="getWorksByAssignee" parameterType="hashMap" resultType="managerVO">
+		<![CDATA[
+        SELECT employee.emp_name, COUNT(*) AS managerCount
+        FROM works
+        JOIN manager ON works.work_no = manager.work_no
+        JOIN employee ON manager.emp_no = employee.emp_no
+        WHERE works.work_status IN (1, 2, 4)
+        AND PRO_NO = #{proNo}
+        GROUP BY employee.emp_name
+        ]]>
+	</select>
+	
+	<!-- 시간경과에 따른 작업 완료 -->
+	<select id="getWorkCompletionOverTime" parameterType="int" resultType="map">
+	    <![CDATA[
+	    SELECT TO_CHAR(TO_DATE(work_enddate, 'YYYYMMDD'), 'YYYY-MM-DD') AS workDate,
+	           COUNT(*) AS completedCount
+	    FROM works
+	    WHERE work_status = 3
+	    AND PRO_NO = #{proNo}
+	    GROUP BY TO_CHAR(TO_DATE(work_enddate, 'YYYYMMDD'), 'YYYY-MM-DD')
+	    ORDER BY workDate
+	    ]]>
+	</select>
+
+	<select id="selectFirstProjectFromEmpNo" parameterType="int" resultType="int">
+		SELECT m.pro_no FROM members m , projects p
+		WHERE m.emp_no = #{empNo} AND p.PRO_STATUS = 2 AND ROWNUM = 1
+	</select>
+
+</mapper>

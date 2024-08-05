@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mapper.IKanbanMapper">
+
+	<resultMap id="worksVOResultMap" type="WorksVO">
+	    <id property="workNo" column="work_no"/>
+	    <result property="proNo" column="pro_no"/>
+	    <result property="workStatus" column="work_status"/>
+	    <result property="workTitle" column="work_title"/>
+	    <result property="workContent" column="work_content"/>
+	    <result property="workFirst" column="work_first"/>
+	    <result property="workDate" column="work_date"/>
+	    <result property="workStartdate" column="work_startdate"/>
+	    <result property="workEnddate" column="work_enddate"/>
+	    <result property="workProg" column="work_prog"/>
+	    <result property="workParentNo" column="work_parent_no"/>
+	    <!-- 추가 필드 매핑 -->
+	    <result property="workFirstName" column="work_first_name"/>
+	    
+	    <collection property="workCommentList" resultMap="workCommentVOResultMap">
+	    </collection>
+	    <collection property="managerList" resultMap="managerVOResultMap">
+	    </collection>
+	</resultMap>
+	
+	
+	<resultMap id="workCommentVOResultMap" type="WorkCommentVO">
+	    <id property="workCoNo" column="work_co_no"/>
+	    <result property="workNo" column="work_no"/>
+	    <result property="workCoWriter" column="work_co_writer"/>
+	    <result property="workCoContent" column="work_co_content"/>
+	    <result property="workCoDate" column="work_co_date"/>
+	    <result property="workCoParentNo" column="work_co_parent_no"/>
+	    <result property="workCoModdate" column="work_co_moddate"/>
+	</resultMap>
+	
+	
+	<resultMap id="managerVOResultMap" type="ManagerVO">
+	    <id property="managerNo" column="manager_no"/>
+	    <result property="workNo" column="work_no"/>
+	    <result property="empNo" column="emp_no"/>
+	    <result property="empName" column="emp_name"/>
+	    <!-- 필요한 다른 필드들 -->
+	</resultMap>
+	
+	
+	
+	
+	<select id="workListOfKanban" parameterType="int" resultMap="worksVOResultMap">
+	    select
+	        w.work_no, w.pro_no, w.work_status, w.work_title, w.work_content, w.work_first, 
+	        w.work_date, w.work_startdate, w.work_enddate, w.work_prog, w.work_parent_no,
+	        wc.work_co_no, wc.work_co_writer, wc.work_co_content, wc.work_co_date, wc.work_co_parent_no, wc.work_co_moddate,
+	        m.manager_no, m.emp_no, e.emp_name
+	    from works w
+	    left join work_comment wc on w.work_no = wc.work_no
+	    left join manager m on w.work_no = m.work_no
+	    left join employee e on m.emp_no = e.emp_no
+	    where w.pro_no = #{projectNo}
+	</select>
+	
+	
+	
+	<update id="updateStatusOfKanban" parameterType="worksVO">
+		update works
+		set work_status = #{workStatus}
+		where work_no = #{workNo}
+	</update>
+
+</mapper>
